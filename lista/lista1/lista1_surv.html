@@ -357,17 +357,17 @@ display: none;
 </div>
 
 
-<div id="exercıcio-1-em-um-estudo-com-15-pacientes-submetidos-a-hemodialise-foram-registrados-os-tempos-decorridos-desde-a-primeira-dialise-ate-o-obito-em-meses.-todos-os-pacientes-entraram-juntos-no-inıcio-do-estudo-e-a-informacao-em-meses-de-cada-paciente-e-dada-por" class="section level3">
-<h3>Exercıcio 1: Em um estudo com 15 pacientes submetidos a hemodialise,
+<div id="exercıcio-1-em-um-estudo-com-15-pacientes-submetidos-a-hemodialise-foram-registrados-os-tempos-decorridos-desde-a-primeira-dialise-ate-o-obito-em-meses.-todos-os-pacientes-entraram-juntos-no-inıcio-do-estudo-e-a-informacao-em-meses-de-cada-paciente-e-dada-por" class="section level4">
+<h4>Exercıcio 1: Em um estudo com 15 pacientes submetidos a hemodialise,
 foram registrados os tempos decorridos desde a primeira dialise ate o
 obito (em meses). Todos os pacientes entraram juntos no inıcio do estudo
-e a informacao (em meses) de cada paciente e dada por:</h3>
+e a informacao (em meses) de cada paciente e dada por:</h4>
 <p><span class="math display">\[
 6 \ \ 4 \ \ 12^+ \ \ 3^+ \ \ 1 \ \ 3 \ \ 1 \ \ 2 \ \ 3 \ \ 9^+ \ \ 10 \
 \ 11 \ \ 5^+ \ \ 5 \ \ 1
 \]</span></p>
-<div id="a-defina-a-resposta-do-estudo" class="section level4">
-<h4>a) Defina a resposta do estudo</h4>
+<div id="a-defina-a-resposta-do-estudo" class="section level5">
+<h5>a) Defina a resposta do estudo</h5>
 <pre class="r"><code>tempo = c(6,4,12,3,1,3,1,2,3,9,10,11,5,5,1)
 censura = c(1,1,0,0,1,1,1,1,1,0,1,1,0,1,1)
 
@@ -394,54 +394,65 @@ plot(KM,conf.int = F, mark.time = T)</code></pre>
 ##    10      3       1    0.240   0.132       0.0816        0.706
 ##    11      2       1    0.120   0.108       0.0207        0.695</code></pre>
 </div>
-<div id="b-identifique-o-tipo-de-censura-observado-nesse-estudo" class="section level4">
-<h4>b) identifique o tipo de censura observado nesse estudo</h4>
+<div id="b-identifique-o-tipo-de-censura-observado-nesse-estudo" class="section level5">
+<h5>b) identifique o tipo de censura observado nesse estudo</h5>
 <p>Censura a direita, pois elas ocorreram depois do inicio do
 estudo.</p>
 </div>
 </div>
-<div id="exercıcio-2-um-numero-grande-de-indivıduos-foi-acompanhado-para-estudar-o-aparecimento-de-um-certo-sintoma.-os-indivıduos-foram-incluıdos-ao-longo-do-estudo-e-foi-considerada-como-resposta-de-interesse-a-idade-em-que-este-sintoma-apareceu-pela-primeira-vez.-para-os-seis-indivıduos-selecionados-e-descritos-a-seguir-identifique-o-tipo-de-censura-apresentado." class="section level3">
-<h3>Exercıcio 2: Um numero grande de indivıduos foi acompanhado para
+<div id="exercıcio-2-um-numero-grande-de-indivıduos-foi-acompanhado-para-estudar-o-aparecimento-de-um-certo-sintoma.-os-indivıduos-foram-incluıdos-ao-longo-do-estudo-e-foi-considerada-como-resposta-de-interesse-a-idade-em-que-este-sintoma-apareceu-pela-primeira-vez.-para-os-seis-indivıduos-selecionados-e-descritos-a-seguir-identifique-o-tipo-de-censura-apresentado." class="section level4">
+<h4>Exercıcio 2: Um numero grande de indivıduos foi acompanhado para
 estudar o aparecimento de um certo sintoma. Os indivıduos foram
 incluıdos ao longo do estudo e foi considerada como resposta de
 interesse a idade em que este sintoma apareceu pela primeira vez. Para
 os seis indivıduos selecionados e descritos a seguir, identifique o tipo
-de censura apresentado.</h3>
-<div id="a-o-primeiro-indivıduo-entrou-no-estudo-com-25-anos-ja-apresentando-o-sintoma." class="section level4">
-<h4>a) O primeiro indivıduo entrou no estudo com 25 anos ja apresentando
-o sintoma.</h4>
+de censura apresentado.</h4>
+<div id="a-o-primeiro-indivıduo-entrou-no-estudo-com-25-anos-ja-apresentando-o-sintoma." class="section level5">
+<h5>a) O primeiro indivıduo entrou no estudo com 25 anos ja apresentando
+o sintoma.</h5>
 <p>Censura a esquerda pois o evento ocorreu antes do inicio do
 estudo</p>
 </div>
-<div id="b-outros-dois-indivıduos-entraram-no-estudo-com-20-e-28-anos-e-nao-apresentaram-o-sintoma-até-o-encerramento-do-estudo" class="section level4">
-<h4>b) Outros dois indivıduos entraram no estudo com 20 e 28 anos e nao
-apresentaram o sintoma até o encerramento do estudo</h4>
+<div id="b-outros-dois-indivıduos-entraram-no-estudo-com-20-e-28-anos-e-nao-apresentaram-o-sintoma-até-o-encerramento-do-estudo" class="section level5">
+<h5>b) Outros dois indivıduos entraram no estudo com 20 e 28 anos e nao
+apresentaram o sintoma até o encerramento do estudo</h5>
 <p>Censura a direita pois o evento nao ocorreu no tempo de estudo</p>
 </div>
-<div id="c-outros-dois-indivıduos-entraram-com-35-e-40-anos-e-apresentaram-o-sintoma-no-segundo-e-no-sexto-exames-respectivamente-apos-terem-entrado-no-estudo.-os-exames-foram-realizados-a-cada-dois-anos." class="section level4">
-<h4>c) Outros dois indivıduos entraram com 35 e 40 anos e apresentaram o
+<div id="c-outros-dois-indivıduos-entraram-com-35-e-40-anos-e-apresentaram-o-sintoma-no-segundo-e-no-sexto-exames-respectivamente-apos-terem-entrado-no-estudo.-os-exames-foram-realizados-a-cada-dois-anos." class="section level5">
+<h5>c) Outros dois indivıduos entraram com 35 e 40 anos e apresentaram o
 sintoma no segundo e no sexto exames, respectivamente, apos terem
-entrado no estudo. Os exames foram realizados a cada dois anos.</h4>
+entrado no estudo. Os exames foram realizados a cada dois anos.</h5>
 <p>Censura intervalar pois o envento ocorreu no intervalo de tempo entre
 os exames</p>
 </div>
-<div id="d-o-ultimo-indivıduo-selecionado-entrou-no-estudo-com-36-anos-e-mudou-da-cidade-depois-de-4-anos-sem-ter-apresentado-o-sintoma." class="section level4">
-<h4>d) O ultimo indivıduo selecionado entrou no estudo com 36 anos e
-mudou da cidade depois de 4 anos sem ter apresentado o sintoma.</h4>
+<div id="d-o-ultimo-indivıduo-selecionado-entrou-no-estudo-com-36-anos-e-mudou-da-cidade-depois-de-4-anos-sem-ter-apresentado-o-sintoma." class="section level5">
+<h5>d) O ultimo indivıduo selecionado entrou no estudo com 36 anos e
+mudou da cidade depois de 4 anos sem ter apresentado o sintoma.</h5>
 <p>Censura a direita pois nao teve a ocorencia do efeito de
 interesse</p>
 </div>
 </div>
-<div id="exercicio-3-mostre-que" class="section level3">
-<h3>Exercicio 3: Mostre que:</h3>
-<div id="a-ht-fracftst-frac-ddtlogst" class="section level4">
-<h4>a) <span class="math inline">\(h(t) = \frac{f(t)}{S(t)} =
-\frac{-d}{dt}(logS(t))\)</span></h4>
+<div id="exercicio-3-mostre-que" class="section level4">
+<h4>Exercicio 3: Mostre que:</h4>
+<div id="a-ht-fracftst-frac-ddtlogst" class="section level5">
+<h5>a) <span class="math inline">\(h(t) = \frac{f(t)}{S(t)} =
+\frac{-d}{dt}(logS(t))\)</span></h5>
 </div>
-<div id="b-ht-int_0thudu---logst" class="section level4">
-<h4>b) <span class="math inline">\(H(t) = \int_{0}^{t}h(u)du = -
-log(S(t))\)</span></h4>
+<div id="b-ht-int_0thudu---logst" class="section level5">
+<h5>b) <span class="math inline">\(H(t) = \int_{0}^{t}h(u)du = -
+log(S(t))\)</span></h5>
 </div>
+</div>
+<div id="exercıcio-4-seja-t-uma-variavel-aleatoria-com-distribuicao-pareto-com-parametros-alpha-0-e-beta-0.-a-funcao-de-risco-de-t-e-dada-por" class="section level4">
+<h4>Exercıcio 4: Seja T uma variavel aleatoria com distribuicao Pareto
+com parametros <span class="math inline">\(\alpha &gt; 0\)</span> e
+<span class="math inline">\(\beta &gt; 0\)</span>. A funcao de risco de
+T e dada por:</h4>
+<p><span class="math display">\[
+h(t) = \frac{\alpha}{\beta + t}, \ \ t&gt; 0
+\]</span></p>
+<p>Determine as funcoes <span class="math inline">\(S(t)\)</span> e
+<span class="math inline">\(f(t)\)</span> da distribuicao Pareto.</p>
 </div>
 
 
