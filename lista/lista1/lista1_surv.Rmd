@@ -74,7 +74,9 @@ Censura a direita pois nao teve a ocorencia do efeito de interesse
 $$
 \frac{-d}{dt}h(t) = \frac{-d}{dt}(\frac{f(t)}{S(t)}) \\
 
-\frac{-d}{dt}h(t) = \frac{f(t)^{'}\cdot S(t) - f(t)\cdot S(t)^{'}}{s(t)^2}
+\frac{-d}{dt}h(t) = \frac{f(t)^{'}\cdot S(t) - f(t)\cdot S(t)^{'}}{s(t)^2} \\
+
+\frac{-d}{dt}h(t) = \frac{f(t)^{'}\cdot S(t) - f(t)\cdot f(t)}{s(t)^2} \\
 $$
 
 
