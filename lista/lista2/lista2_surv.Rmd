@@ -1,0 +1,146 @@
+---
+title: "Lista 2 Sobrevivencia"
+author: "Davi Wentrick Feijó"
+date: "2023-09-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### Exercıcio 1: Considere que o tempo de vida (em anos) de um equipamento eletronico pode ser representado por uma variavel aleatoria T com a seguinte funcao densidade de probabilidade:
+
+$$
+f(t) = 2t e^{-t^2}
+$$
+
+##### (a) Qual a probabilidade de um equipamento eletronico funcionar por mais de 1 ano ?
+
+##### (b) Determine a funcao de risco h(t) e responda: O risco desse equipamento falhar aumenta ou diminui com o passar do tempo?
+
+
+
+#### Exercıcio 2: Os dados da Tabela 1 referem-se aos tempo de sobrevivencia (em dias) de pacientes com cancer submetidos a radioterapia (o sımbolo + indica censura).
+
+```{r echo=FALSE}
+pacman::p_load(tidyverse,survival)
+
+tempo = c(7,34,42,63,64,74,83,84,91,108,112,129,133,133,139,140,140,146,149,154,157,160,160,
+          165,173,176,185,218,225,241,248,273,279,297,319,405,417,420,440,523,523,
+          583,694,1101,1116,1146,1226,1349,1412,1417)
+censura = c(rep(1,5),0,rep(1,20),0,rep(1,5),0,1,0,rep(1,5),0,1,1,1,0,1,0,0,0,1)
+
+dados = data.frame(tempo,censura) %>%
+  arrange(tempo)
+
+dados
+```
+
+
+
+##### (a) Determine as estimativas da S(t) e H(t) pelos metodos de Kaplan-Meier e Nelson-Aalen.
+
+```{r echo=FALSE}
+#modelo de sobrevivencia Kaplan-meier
+
+KM = survfit(Surv(dados$tempo,dados$censura)~1)
+
+#funcao de risco Kaplan-Meier
+HHt = -log(KM$surv)
+
+#Nelson-Aalen
+
+ENA = survfit(coxph(Surv(tempo,censura)~1, method = "breslow"))
+
+#funcao de risco Nelson-Aalen
+HHt = -log(ENA$surv)
+
+```
+
+```{r echo=FALSE}
+cat("Keplan-Meier")
+summary(KM)
+cat("Nelson-Aalen")
+summary(ENA)
+```
+
+
+##### (b) Construa os graficos da $\hat S(t)$ e $\hat H(t)$.
+
+```{r echo=FALSE}
+plot(KM,conf.int = F, mark.time = T)
+plot(stepfun(KM$time[1:(length(KM$time) - 1)],c(0,HHt[1:(length(HHt) - 1)])),do.points = F)
+plot(ENA, conf.int = F,)
+plot(stepfun(ENA$time,c(0,HHt)),do.points = F)
+```
+
+
+##### (c) Encontre a estimativa do tempo mediano.
+
+```{r echo=FALSE}
+KM
+ENA
+```
+
+
+##### (d) Qual a probabilidade de um paciente com cancer sobreviver a:
+
+```{r echo=FALSE}
+results = data.frame(tempo = KM$time, surv_prob = KM$surv)
+```
+
++ 1. 42 dias ?
+
+```{r echo=FALSE}
+results[3,]
+```
++ 2. 100 dias ?
+
+Para os tempos a seguir é necessario fazer uma interpolacao ja que nao temos a observacao no banco
+
+```{r echo=FALSE}
+(100-91)/((108-91)/(0.818-0.839)) + 0.839
+```
+
+
++ 3. 300 dias ?
+
+```{r echo=FALSE}
+(300-297)/((405-297)/(0.337-0.362)) + 0.362
+```
+
++ 4. 1000 dias ?
+
+```{r echo=FALSE}
+(1000-694)/((1101-694)/(0.161-0.187)) + 0.187
+```
+
+
+
+(e) Interprete os resultados obtidos nos itens anteriores.
+
+Podemos perceber que existe uma queda grande na probabilidade de sobrevivencia até os 200 dias, uma vez que passa desse ponto a queda deixa de ser repetentina e comeca a estabilizar, contudo vale notar que depois dos 200 dias nao temos muitas observacoes
+
+
+(f) Construa o grafico do tempo total em teste (curva TTT) e indique quais distribuicoes de probabilidade podem ser usadas para modelar os tempos de sobrevivencia de pacientes com cancer.
+
+
+
+#### Exercıcio 3: Os dados apresentados na Tabela 2 representam o tempo (em dias) ate a morte de pacientes com cancer de ovario tratados na Mayo Clinic (Fleming, et al., 1980). O sımbolo + indica censura.
+
+```{r}
+
+```
+
+
+##### (a) Determine as estimativas da S(t) pelo metodo de Kaplan-Meier e construa o grafico da S(t). Interprete os resultados.
+
+
+##### (b) Repita a letra (a) considerando os grupos. Apresente o grafico da S(t) de cada grupo em um mesmo grafico. Interprete os resultados.
+
+
+##### (c) Teste a hipotese de igualdade das funcoes de sobrevivencia dos grupos usando dois testes diferentes. Os resultados dos testes sao consistentes ? Em caso negativo, explique a razao da diferenca dos resultados
+
+##### (d) Construa o grafico do tempo total em teste (curva TTT), da H(t) e indique quais distribuicoes de probabilidade podem ser usadas para modelar os tempos de sobrevivencia de ratos.
