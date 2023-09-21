@@ -57,27 +57,27 @@ dados = data.frame(tempo,censura,grupo) %>%
 
 KM = survfit(Surv(dados$tempo,dados$censura)~1)
 
-plot(KM,conf.int = F, mark.time = T)
+autoplot(KM,conf.int = F, mark.time = T)
 
 summary(KM)
 
 #funcao de risco Kaplan-Meier
 HHt = -log(KM$surv)
 
-plot(stepfun(KM$time,c(0,HHt)),do.points = F)
+autoplot(stepfun(KM$time,c(0,HHt)),do.points = F)
 
 
 #Nelson-Aalen
 
 ENA = survfit(coxph(Surv(tempo,censura)~1, method = "breslow"))
 summary(ENA)
-plot(ENA, conf.int = F,)
+autoplot(ENA, conf.int = F,)
 
 
 #funcao de risco Nelson-Aalen
 HHt = -log(ENA$surv)
 
-plot(stepfun(KM$time,c(0,HHt)),do.points = F)
+autoplot(stepfun(KM$time,c(0,HHt)),do.points = F)
 
 #analise por grupo ----- 
 
