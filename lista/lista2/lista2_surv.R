@@ -104,8 +104,54 @@ KM
 
 
 
+###############################################################################
+# Exercicio 4
+
+tempo = c(140,177,50,65,86,153,181,191,77,84,87,56,66,73,119,140,rep(200,14),124,
+          58,56,68,79,89,107,86,142,110,96,142,86,75,117,98,105,126,43,46,81,133,
+          165,170,rep(200,5),112,68,84,109,153,143,60,70,98,164,63,63,77,91,91,66,
+          70,77,63,66,66,66,94,101,105,108,112,115,126,161,178)
+censura = c(rep(1,15),rep(0,15),rep(1,23),rep(0,7),rep(1,30))
+grupo = c(rep(1,30),rep(2,30),rep(3,30))
+
+dados = data.frame(tempo,censura,grupo) %>%
+  arrange(tempo)%>%
+  mutate(grupo = as.factor(grupo))
 
 
+####### 
+# a)
+
+KM = survfit(Surv(tempo,censura)~1,data = dados)
+
+autoplot(KM,conf.int = F, mark.time = T)
+
+summary(KM)
+
+#funcao de risco Kaplan-Meier
+HHt = -log(KM$surv)
+
+autoplot(stepfun(KM$time,c(0,HHt)),do.points = F)
+
+#######
+# b)
+
+KM = survfit(Surv(tempo,censura)~grupo,data = dados)
+
+autoplot(KM,conf.int = F, mark.time = T)
+
+summary(KM)
+
+#######
+# c)
+
+survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
+
+survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
+
+
+#######
+# d)
 
 
 
