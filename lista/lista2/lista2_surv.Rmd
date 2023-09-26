@@ -197,3 +197,9 @@ survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
 
 
 ##### (d) Construa o grafico do tempo total em teste (curva TTT), da H(t) e indique quais distribuicoes de probabilidade podem ser usadas para modelar os tempos de sobrevivencia de ratos.
+
+#### Exercıcio 4: Um laboratorio interessado em investigar a relacao entre a dieta e o desenvolvimento de um tumor dividiu 90 ratos em tres grupos quanto ao tipo de dieta: baixo teor de gordura, saturada e nao saturada. Os ratos tinham a mesma idade, eram da mesma especie e tinham condicoes fısicas semelhantes. Os ratos foram observados por 200 dias e os tempos ate o surgimento de um tumor encontram-se na Tabela 3. O sımbolo + indica censura.
+
+
+
+
