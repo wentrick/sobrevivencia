@@ -185,18 +185,32 @@ dados = data.frame(tempo,censura,grupo) %>%
 
 ##### a) Estime a funcao de sobrevivencia do estudo e represente graficamente.
 
-Para estimar a função de sobrevivência do estudo, é necessário realizar análises estatísticas e representar graficamente os resultados.
 
-
+Utilizando o Kaplan-Meier
 ```{r}
-#modelo de sobrevivencia
+#modelo de sobrevivencia Ka
 
 KM = survfit(Surv(dados$tempo,dados$censura)~1)
 
 plot(KM,conf.int = F, mark.time = T)
 ```
 
+Utilizando Nelson Aalen
 
+```{r}
+ENA = survfit(coxph(Surv(tempo,censura)~1, method = "breslow"))
+plot(ENA, conf.int = F,)
+```
+
+Vamos comparar os 2 metodos:
+
+```{r}
+plot(KM, conf.int = F, mark.time = T, col = "blue", xlab = "Tempo", ylab = "Probabilidade de Sobrevivência")
+# Adicionar a curva Nelson-Aalen ao gráfico existente
+lines(ENA,conf.int = F, col = "red")
+```
+
+Vale notar que as estimativas obtidas pelo estimador de Nelson-Aalen são maiores ou iguais às obtidas pelo estimador de Kaplan-Meier.
 
 ##### b) Estime as funcoes de sobrevivencia de cada grupo e represente graficamente.
 
@@ -213,13 +227,96 @@ logrank = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
 
 wilcoxon = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
 ```
+##### b) Estime as funcoes de risco acumulado e represente graficamente.
 
-##### c) Avaliação de Fatores de Risco
+Keplan-Meier
 
-Será realizada uma avaliação para determinar se o grupo é um fator de risco no estudo de malária.
+```{r}
+HHt = sort(-log(KM$surv[KM$surv != 0]))
+tempo = sort(KM$time[-c(18,24)])
+
+plot(stepfun(tempo,c(0,HHt)),do.points = F)
+```
+
+Nelson Aalen
+
+```{r}
+HHt = sort(-log(ENA$surv[ENA$surv != 0]))
+tempo = sort(ENA$time)
+
+plot(stepfun(tempo,c(0,HHt)),do.points = F)
+```
 
 
+#### Comparação de Curvas de Sobrevivência 
+
+Na prática, sempre que temos a presença de variáveis regressoras categóricas em nossos estudos, o objetivo é comparar o efeito das categorias no tempo de sobrevivência. Alguns testes não-paramétricos incluem:
+
+- Teste de LogRank
+- Teste de Wilcoxon
+- Teste de Tarone e Ware
+- Família de testes de Harrington-Fleming
+
+Esses testes são particularmente apropriados quando a razão das funções de risco dos grupos a serem comparados é aproximadamente constante (suposição de riscos proporcionais).
+
+A suposição de riscos proporcionais pode ser verificada pelo comportamento das curvas de sobrevivência de cada grupo, ao verificar que a razão das funções de risco dos grupos a serem comparados é aproximadamente constante.
+
+##### Teste de LogRank
+
+O Teste de LogRank é usado para comparar duas curvas de sobrevivência de grupos de indivíduos, chamados de grupo1 e grupo2. O objetivo do estudo é testar se as curvas de sobrevivência são iguais. Assim, temos as seguintes hipóteses:
+
+- \(H_0\): \(S_1(t) = S_2(t)\) - Não existe diferença entre as curvas de sobrevivência.
+- \(H_1\): \(S_1(t) \neq S_2(t)\) - Existe diferença entre as curvas de sobrevivência.
+
+O teste de LogRank é baseado na estatística de teste qui-quadrado e tem aproximadamente uma distribuição qui-quadrado com 1 grau de liberdade.
+
+```{r}
+logrank = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
+```
+
+```{r echo=FALSE}
+logrank
+```
 
 
+##### Teste de Wilcoxon
 
+O Teste de Wilcoxon é utilizado para comparar duas ou mais curvas de sobrevivência. Ele utiliza pesos iguais ao número de indivíduos sob risco e coloca mais peso na proporção inicial do eixo do tempo. Em situações em que não temos a proporcionalidade dos riscos, este teste é mais adequado do que o teste de Log-Rank.
+
+```{r}
+wilcoxon = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
+```
+
+```{r echo=FALSE}
+wilcoxon
+```
+
+
+#### Cálculo do Risco Relativo
+
+Se existir evidência de desigualdade entre as curvas de sobrevivência dos grupos 1 e 2, e os riscos de cada função não se cruzarem (riscos proporcionais), então podemos calcular o Risco Relativo.
+
+O cálculo do Risco Relativo (RR) é dado por:
+
+\[
+RR = \frac{O1/E1}{O2/E2} = \frac{O1E2}{E1O2} = \frac{\sum_{j=1}^{k} d1j}{\sum_{j=1}^{k} Ed1j)} \times \frac{\sum_{j=1}^{k} (dj - E_{d1j})}{\sum_{j=1}^{k} dj-d1j}
+\]
+
+onde:
+- \(O1\) e \(E1\) são os números observados e esperados no grupo 1.
+- \(O2\) e \(E2\) são os números observados e esperados no grupo 2.
+- \(k\) é o número de eventos de interesse.
+- \(dj\) é o número de eventos de interesse no grupo \(j\).
+- \(Ed1j\) é o número esperado de eventos de interesse no grupo 1 no grupo \(j\).
+
+Este cálculo permite avaliar o Risco Relativo entre os grupos 1 e 2, considerando a proporção dos eventos de interesse e os números esperados.
+
+
+```{r}
+RR = (logrank$obs[1]/logrank$exp[1])/(logrank$obs[2]/logrank$exp[2])
+```
+
+```{r echo=FALSE}
+RR
+```
 

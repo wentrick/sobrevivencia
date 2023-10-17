@@ -18,8 +18,6 @@ KM = survfit(Surv(dados$tempo,dados$censura)~dados$grupo)
 
 plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 
-autoplot(KM,conf.int = FALSE)
-
 summary(KM)
 
 logrank = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
