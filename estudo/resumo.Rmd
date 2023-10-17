@@ -7,24 +7,219 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(tidyverse,survival,ggplot2)
 ```
 
-## R Markdown
+"A análise de sobrevivência é um ramo da estatística que engloba técnicas e métodos destinados a investigar informações associadas ao tempo transcorrido até a ocorrência de um evento específico de interesse. Geralmente, a análise de sobrevivência é empregada na análise de dados provenientes de diversas áreas, incluindo as Ciências Biológicas, Engenharias (sob o título de 'Análise de Confiabilidade') e Ciências Sociais (como 'Análise do Histórico de Eventos - Event History Analysis')."
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+#### Conceitos
+
+
+##### Tempo de Falha
+
+
+A variável resposta é definida como o tempo até a ocorrência de um evento de interesse. Na análise de sobrevivência, esse período é denominado tempo de falha.
+
+Para determinar o tempo de falha, é necessário:
+
++ Fixar o ponto de partida do estudo,
++ Escolher a escala de medida a ser utilizada
++ Identificar o evento de interesse, geralmente indesejado e conhecido como falha.
+
+A falha pode ser causada por uma única razão ou várias razões. Estudos que levam em consideração múltiplas causas de falha são chamados de riscos competitivos.
+
+##### Censura e Truncamento
+
+Censura refere-se à perda de informação devido à falta de observação da data de ocorrência do desfecho, resultando em observações parciais ou incompletas. Os motivos listados anteriormente (exceto o último) são possíveis causas de dados censurados.
+
+As observações censuradas devem ser incluídas na análise dos dados, uma vez que, mesmo sendo incompletas, elas fornecem informações sobre o tempo de vida de objetos e indivíduos. A omissão das censuras pode levar a conclusões tendenciosas na análise estatística.
+
+Portanto, há a necessidade de introduzir uma variável adicional na análise que indique se o valor do tempo de sobrevivência de um determinado indivíduo foi ou não observado. Essa variável, geralmente representada por \delta, é conhecida como variável indicadora de censura e é expressa da seguinte forma:
+
+$\delta_i$ =
+1, se o i-ésimo indivíduo falhou
+0, se o i-ésimo indivíduo foi censurado
+
+O truncamento ocorre quando alguns indivíduos, que naturalmente fariam parte da população estudada, são completamente excluídos do estudo devido a certas condições que restringem a participação de certos indivíduos.
+
+Para resumir:
+
++ Censura: o evento de interesse não ocorreu por algum motivo.
+
++ Truncamento: exclui certos indivíduos devido a alguma condição.
+
+##### Tipos de Censura
+
++ Censura à direita é caracterizada pelo evento ocorrer após o tempo registrado. Alguns mecanismos de censura incluem:
+
++ Censura do Tipo I: o estudo termina após um período de tempo fixo, tf, e no final de tf, uma ou mais observações em estudo não falharam. O tempo tf deve ser determinado antes do início do estudo.
+
++ Censura do Tipo II: o estudo termina após o evento de interesse ocorrer em um número fixo (k ≤ n) de indivíduos. O número de falhas (k) deve ser determinado antes do início do estudo. Por exemplo, em dados industriais, o número k de componentes que falharão até o final do estudo é pré-definido.
+
++ Censura aleatória: engloba todos os casos em que as observações não experimentam o evento de interesse devido a motivos não controláveis. Por exemplo, em um estudo sobre o efeito da terapia com esteroides no tratamento da hepatite viral aguda, cada paciente foi acompanhado por 16 semanas ou até a ocorrência da morte (evento de interesse) ou perda de acompanhamento.
+
++ Censura à esquerda ocorre quando o tempo registrado é maior do que o tempo de falha, indicando que o evento de interesse já ocorreu quando o indivíduo foi observado. Por exemplo, em um estudo para determinar a idade em que as crianças aprendem a ler em uma comunidade, algumas crianças já sabiam ler quando os pesquisadores começaram a pesquisa, e não se lembravam de quando isso aconteceu.
+
+Observação: No exemplo acima, também pode ocorrer censura à direita para as crianças que não sabiam ler quando entraram no estudo. Nesse caso, os tempos de vida são chamados de "duplamente censurados." Para mais detalhes, consulte Turnbull (1974).
+
++ Censura intervalar ocorre em estudos nos quais os elementos têm acompanhamento periódico. O evento de interesse ocorre em um intervalo de tempo, ou seja, T ∈ (L, U].
+
+##### Representacao dos dados
+
+Na análise de sobrevivência, as informações associadas à variável resposta de cada indivíduo são representadas pelo par (ti, δi), em que ti é o tempo de falha ou censura, e δi é a variável indicadora de falha ou censura, ou seja,
+
+$\delta_i$ =
+1 se ti é o tempo de falha
+0 se ti é o tempo de censura.
+
+Quando se consideram situações de estudo com a presença de variáveis explicativas, essas são indicadas por $xi = (xi1, xi2, ..., xip)$. Portanto, os dados são representados por $(ti, \delta_i, xi)$, em que $i = 1, ..., n$ indica o número de indivíduos, e p indica o número de variáveis explicativas no modelo.
+
+
+#### Função de Sobrevivência
+
+A função de sobrevivência, denotada por `S(t)`, é definida como a probabilidade de um indivíduo sobreviver até o tempo `t`, ou seja, a probabilidade de um indivíduo não falhar antes de atingir o tempo `t`. Essa função é expressa pela fórmula:
+
+\[S(t) = P(T \geq t) = \int_{t}^{\infty} f(x) dx,\]
+
+onde `S(t)` é uma função monótona decrescente e contínua (LAWLESS, 2003). Como consequência, a função de distribuição acumulada é definida como a probabilidade de uma observação não sobreviver além do tempo `t`, ou seja, \(F(t) = 1 - S(t).\)
+
+As propriedades da função de sobrevivência própria são:
+
+1. \(\lim_{t\to 0} S(t) = 1\): Isso significa que, à medida que o tempo \(t\) se aproxima de zero, a probabilidade de um indivíduo sobreviver é igual a 1.
+
+2. \(\lim_{t\to \infty} S(t) = 0\): Isso indica que, à medida que o tempo \(t\) se torna infinitamente grande, a probabilidade de um indivíduo sobreviver se torna igual a 0.
+
+Essas propriedades são fundamentais na análise de sobrevivência e fornecem informações essenciais sobre o comportamento da função de sobrevivência.
+
+Em algumas situações, a função de sobrevivência pode apresentar o seguinte comportamento:
+
+\[
+\lim_{{t \to 0}} S(t) = 1
+\]
+
+Isso indica que, à medida que o tempo \(t\) se aproxima de zero, a probabilidade de sobrevivência é igual a 1.
+
+\[
+\lim_{{t \to \infty}} S(t) = p
+\]
+
+Nesse caso, \(p\) é uma probabilidade. Quando \(p\) é uma probabilidade, dizemos que a função de sobrevivência é imprópria. Modelos de sobrevivência com fração de cura devem ser utilizados para modelar os dados nessa situação.
+
+
+##### Função de Risco e Função de Taxa de Falha
+
+A função de risco (ou função taxa de falha) é definida como o limite da probabilidade de um indivíduo falhar no intervalo de tempo \([t, \Delta t)\), assumindo que este mesmo indivíduo sobreviveu até o tempo \(t\), dividida pelo comprimento do intervalo e é representada por (LAWLESS, 2003):
+
+\[
+h(t) = \lim_{{\Delta t\to 0}} \frac{{P(t \leq T < t + \Delta t | T \geq t)}}{\Delta t}. \tag{3}
+\]
+
+Pode, ainda, ser expressa em termos da função densidade de probabilidade e da função de sobrevivência, ou seja,
+
+\[
+h(t) = \frac{{f(t)}}{{S(t)}}.
+\]
+
+A função de risco descreve como a probabilidade instantânea de falha se modifica com o passar do tempo. É conhecida como taxa de falha instantânea, força de mortalidade e taxa de mortalidade condicional (COX; OAKES, 1984).
+
+Em relação à forma da função, a função de risco é mais informativa do que a função de sobrevivência. Diferentes funções de sobrevivência podem ter formas semelhantes, enquanto as respectivas funções taxa de falha podem diferir drasticamente. Dessa forma, a modelagem da função taxa de falha é um importante método para dados de sobrevivência (COLOSIMO; GIOLO, 2006), pois pode ter forma crescente, decrescente, constante ou não monótona.
+
+Outra função utilizada para representar o tempo de sobrevivência é a função de taxa de falha acumulada, obtida por meio da função de risco, \(h(t)\), e é representada por:
+
+\[
+H(t) = \int_{0}^{t} h(u) du. \tag{5}
+\]
+
+Essa função fornece a taxa de falha acumulada do indivíduo e pode ser usada para obter \(h(t)\) na estimação não paramétrica.
+
+#### Relação entre as Funções
+
+As funções definidas anteriormente estão matematicamente relacionadas entre si. Algumas relações importantes incluem:
+
+1. \(\frac{{df(t)}}{{dt}} = -S'(t)\), onde \(f(t)\) é a derivada da função de sobrevivência \(S(t)\).
+
+Sabe-se que a função de distribuição acumulada é \(F(t) = 1 - S(t)\), então:
+
+2. \(\frac{{df(t)}}{{dt}} = -S'(t) = -\frac{{d[1 - S(t)]}}{{dt}}\).
+
+Considerando \(\frac{{df(t)}}{{dt}} = -S'(t)\) e a expressão (4), temos:
+
+3. \(h(t) = -\frac{{S'(t)}}{{S(t)}} = -\frac{{d[\log S(t)]}}{{dt}}\).
+
+Portanto:
+
+4. \(\log S(t) \Big|_{t_0} = -\int_{t_0}^{t} h(u) du\).
+
+Uma função importante é a função de risco acumulada, expressa por:
+
+5. \(H(t) = \int_{t_0}^{t} h(u) du\).
+
+Das expressões (6) e (7), temos:
+
+6. \(S(t) = \exp\{-H(t)\}\). 
+
+As expressões (4) e (8) são amplamente utilizadas para realizar cálculos importantes neste curso.
+
+#### Exemplo - Dados do Estudo de Malária:
+
+A tabela a seguir mostra os tempos de sobrevivência (em dias) observados no estudo da malária para três grupos:
+
+| Grupos  | Tempos de Sobrevivência |
+|---------|-------------------------|
+| Grupo 1 | 7, 8, 8, 8, 8+, 12, 12, 17+, 18, 22, 30+, 30+, 30+, 30+, 30+, 30+ |
+| Grupo 2 | 8, 8+, 9, 10, 10+, 14, 15, 15, 18, 19, 21, 22, 22, 23, 25 |
+| Grupo 3 | 8, 8, 8, 8, 8, 8, 9, 10, 10, 10, 11, 17, 19 |
+
+```{r}
+tempo = c(7,rep(8,4),12,12,17,18,22,rep(30,6),8,8,9,10,10,14,15,15,18,19,21,22,22,23,25,rep(8,6),9,rep(10,3),11,17,19)
+censura = c(rep(1,4),0,rep(1,2),0,rep(1,2),rep(0,6),1,0,rep(1,2),0,rep(1,23))
+grupo = c(rep(1,16),rep(2,15),rep(3,13))
+
+dados = data.frame(tempo,censura,grupo) %>%
+  arrange(tempo) %>%
+  mutate(grupo = as.factor(grupo))
 ```
 
-## Including Plots
+##### a) Estime a funcao de sobrevivencia do estudo e represente graficamente.
 
-You can also embed plots, for example:
+Para estimar a função de sobrevivência do estudo, é necessário realizar análises estatísticas e representar graficamente os resultados.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+```{r}
+#modelo de sobrevivencia
+
+KM = survfit(Surv(dados$tempo,dados$censura)~1)
+
+plot(KM,conf.int = F, mark.time = T)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+##### b) Estime as funcoes de sobrevivencia de cada grupo e represente graficamente.
+
+Para avaliar as funções de sobrevivência de cada grupo, devemos realizar análises separadas para cada um deles e representar os resultados graficamente.
+
+```{r}
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$grupo)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+
+summary(KM)
+
+logrank = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
+
+wilcoxon = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
+```
+
+##### c) Avaliação de Fatores de Risco
+
+Será realizada uma avaliação para determinar se o grupo é um fator de risco no estudo de malária.
+
+
+
+
+
+
