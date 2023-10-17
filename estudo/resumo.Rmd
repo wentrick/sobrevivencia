@@ -8,17 +8,18 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(tidyverse,survival,ggplot2)
+pacman::p_load(tidyverse,survival,ggplot2,AdequacyModel)
+
 ```
 
 "A análise de sobrevivência é um ramo da estatística que engloba técnicas e métodos destinados a investigar informações associadas ao tempo transcorrido até a ocorrência de um evento específico de interesse. Geralmente, a análise de sobrevivência é empregada na análise de dados provenientes de diversas áreas, incluindo as Ciências Biológicas, Engenharias (sob o título de 'Análise de Confiabilidade') e Ciências Sociais (como 'Análise do Histórico de Eventos - Event History Analysis')."
 
 
 
-#### Conceitos
+### Conceitos
 
 
-##### Tempo de Falha
+#### Tempo de Falha
 
 
 A variável resposta é definida como o tempo até a ocorrência de um evento de interesse. Na análise de sobrevivência, esse período é denominado tempo de falha.
@@ -31,7 +32,7 @@ Para determinar o tempo de falha, é necessário:
 
 A falha pode ser causada por uma única razão ou várias razões. Estudos que levam em consideração múltiplas causas de falha são chamados de riscos competitivos.
 
-##### Censura e Truncamento
+#### Censura e Truncamento
 
 Censura refere-se à perda de informação devido à falta de observação da data de ocorrência do desfecho, resultando em observações parciais ou incompletas. Os motivos listados anteriormente (exceto o último) são possíveis causas de dados censurados.
 
@@ -51,7 +52,7 @@ Para resumir:
 
 + Truncamento: exclui certos indivíduos devido a alguma condição.
 
-##### Tipos de Censura
+#### Tipos de Censura
 
 + Censura à direita é caracterizada pelo evento ocorrer após o tempo registrado. Alguns mecanismos de censura incluem:
 
@@ -67,7 +68,7 @@ Observação: No exemplo acima, também pode ocorrer censura à direita para as 
 
 + Censura intervalar ocorre em estudos nos quais os elementos têm acompanhamento periódico. O evento de interesse ocorre em um intervalo de tempo, ou seja, T ∈ (L, U].
 
-##### Representacao dos dados
+#### Representacao dos dados
 
 Na análise de sobrevivência, as informações associadas à variável resposta de cada indivíduo são representadas pelo par (ti, δi), em que ti é o tempo de falha ou censura, e δi é a variável indicadora de falha ou censura, ou seja,
 
@@ -109,7 +110,7 @@ Isso indica que, à medida que o tempo \(t\) se aproxima de zero, a probabilidad
 Nesse caso, \(p\) é uma probabilidade. Quando \(p\) é uma probabilidade, dizemos que a função de sobrevivência é imprópria. Modelos de sobrevivência com fração de cura devem ser utilizados para modelar os dados nessa situação.
 
 
-##### Função de Risco e Função de Taxa de Falha
+#### Função de Risco e Função de Taxa de Falha
 
 A função de risco (ou função taxa de falha) é definida como o limite da probabilidade de um indivíduo falhar no intervalo de tempo \([t, \Delta t)\), assumindo que este mesmo indivíduo sobreviveu até o tempo \(t\), dividida pelo comprimento do intervalo e é representada por (LAWLESS, 2003):
 
@@ -163,7 +164,7 @@ Das expressões (6) e (7), temos:
 
 As expressões (4) e (8) são amplamente utilizadas para realizar cálculos importantes neste curso.
 
-#### Exemplo - Dados do Estudo de Malária:
+### Exemplo - Dados do Estudo de Malária:
 
 A tabela a seguir mostra os tempos de sobrevivência (em dias) observados no estudo da malária para três grupos:
 
@@ -221,11 +222,6 @@ KM = survfit(Surv(dados$tempo,dados$censura)~dados$grupo)
 
 plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 
-summary(KM)
-
-logrank = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 0)
-
-wilcoxon = survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
 ```
 ##### b) Estime as funcoes de risco acumulado e represente graficamente.
 
@@ -235,7 +231,11 @@ Keplan-Meier
 HHt = sort(-log(KM$surv[KM$surv != 0]))
 tempo = sort(KM$time[-c(18,24)])
 
-plot(stepfun(tempo,c(0,HHt)),do.points = F)
+plot(stepfun(tempo,c(0,HHt)),do.points = F,main="Risco Acumulado h(t)",
+        xlab="Tempo",
+        ylab="h(t)")
+
+
 ```
 
 Nelson Aalen
@@ -244,9 +244,25 @@ Nelson Aalen
 HHt = sort(-log(ENA$surv[ENA$surv != 0]))
 tempo = sort(ENA$time)
 
-plot(stepfun(tempo,c(0,HHt)),do.points = F)
+plot(stepfun(tempo,c(0,HHt)),do.points = F,main="Risco Acumulado h(t)",
+        xlab="Tempo",
+        ylab="h(t)")
 ```
+Comparando as duas funcoes de risco acumulado
 
+```{r}
+HHt = sort(-log(KM$surv[KM$surv != 0]))
+tempo = sort(KM$time[-c(18,24)])
+
+plot(stepfun(tempo,c(0,HHt)),do.points = F,col="blue",main="Risco Acumulado h(t)",
+        xlab="Tempo",
+        ylab="h(t)")
+
+HHt = sort(-log(ENA$surv[ENA$surv != 0]))
+tempo = sort(ENA$time)
+
+lines(stepfun(tempo,c(0,HHt)),do.points = F, col = "red")
+```
 
 #### Comparação de Curvas de Sobrevivência 
 
@@ -318,5 +334,147 @@ RR = (logrank$obs[1]/logrank$exp[1])/(logrank$obs[2]/logrank$exp[2])
 
 ```{r echo=FALSE}
 RR
+```
+
+
+#### Curva TTT
+
+Como existem várias formas que o gráfico da função de taxa de falha da variável T pode assumir, é importante utilizar uma metodologia para identificar o modelo mais apropriado para esta variável.
+
+Gráfico do tempo total em teste (curva TTT), proposto por Aarset (1987)
+
+A curva TTT é obtida construindo um gráfico de
+
+\[G(r/n) = \frac{1}{n}\left(\sum_{i=1}^{r} T_{i:n} + (n - r)T_{r:n}\right) \left(\sum_{i=1}^{n} T_i\right),\]
+
+por \(r/n\), sendo que \(r=1, \ldots, n\), e \(T_{i:n}, i = 1, \ldots, n\) são as estatísticas de ordem da amostra.
+
+<div style="text-align:center;">
+![Curvas TTT](curvasTTT.png){width=50%}
+</div>
+
+
+A curva TTT pode apresentar várias formas:
+
++ Reta diagonal (A) ⇒ função taxa de falha constante é adequada.
+
++ Curva convexa (B) ou côncava (C) ⇒ função taxa de falha é monotonicamente decrescente ou crescente, respectivamente.
+
++ Curva convexa e depois côncava (D) ⇒ função taxa de falha tem forma de U.
+
++ Curva côncava e depois convexa (E) ⇒ função taxa de falha é unimodal.
+
+```{r}
+
+TTT(tempo)
+
+```
+
+Podemos notar que se parece com a curva C
+
+#### Método de Máxima Verossimilhança
+
+A ideia do método de Máxima Verossimilhança é a seguinte: com base nos resultados obtidos a partir da amostra, busca-se identificar qual é a distribuição, dentre todas as possíveis definidas pelos valores dos seus parâmetros, que tem a maior probabilidade de ter gerado essa amostra.
+
+Em outras palavras, se a distribuição do tempo de falha segue uma distribuição Weibull, para cada combinação diferente dos parâmetros \gamma e \alpha, obtemos distribuições Weibull distintas. O estimador de Máxima Verossimilhança escolhe o par de valores de \gamma e \alpha que melhor se ajusta aos dados observados na amostra, ou seja, aqueles que maximizam a verossimilhança dos dados sob essa distribuição.
+
+##### Estimadores de Máxima Verossimilhança
+
+Os estimadores de Máxima Verossimilhança são os valores de θ que maximizam a função de verossimilhança L(θ) ou, equivalentemente, o logaritmo de L(θ), ou seja:
+
+\[
+\log(L(θ)) = l(θ) = \sum_{i=1}^{n} \left( \delta_i \log[f(t_i, θ)] + (1 - \delta_i) \log[S(t_i, θ)] \right)
+\]
+
+Os estimadores são encontrados resolvendo o sistema de equações:
+
+\[
+U(θ) = \frac{\partial \log L(θ)}{\partial θ} = 0
+\]
+
+
+Vamos fazer o metodo da verossimilihanca para estimar os parametros da funcao de sobrevivencia desses dados, para isso vamos ajustar uam distribuição de weibull e exponencial
+```{r warning=FALSE}
+#verossimilhanca weibull
+
+weibull_vero = function(param){
+  
+  alfa =  param[1] 
+  gama =  param[2]
+  
+  if((alfa>0) && (gama>0)) {
+    density = (gama/(alfa^gama))* tempo^(gama-1)*exp(-(tempo/alfa)^gama)
+    survival = exp(-(censura/alfa)^gama)
+    
+    max = sum(censura * log(density) + (1-censura)*log(survival))
+    return(-1*max)
+  }
+  
+  else {
+    return (NA)}
+    
+}
+
+results = optim(c(1,1),weibull_vero,NULL,hessian = T)
+
+
+results$convergence
+results$par
+logLW = (-1)*results$value
+invRW = solve(results$hessian)
+varianciaW = diag(invRW)
+eppW = sqrt(varianciaW)
+```
+
+
+```{r warning=FALSE}
+#verossimilhanca exponencial
+
+exponencial_vero = function(param){
+  
+  alfa =  param[1] 
+  gama =  1
+  
+  if((alfa>0)) {
+    density = (gama/(alfa^gama))* tempo^(gama-1)*exp(-(tempo/alfa)^gama)
+    survival = exp(-(censura/alfa)^gama)
+    
+    max = sum(censura * log(density) + (1-censura)*log(survival))
+    return(-1*max)
+  }
+  
+  else {
+    return (NA)}
+  
+}
+
+results = optim(c(1),exponencial_vero,NULL,hessian = T,method = "Brent",lower = 0.0001,upper = 50)
+
+results$convergence
+results$par
+logLE = (-1)*results$value
+invRE = solve(results$hessian)
+varianciaE = diag(invRE)
+eppE = sqrt(varianciaE)
+```
+
+##### Teste da Razão de Verossimilhanças
+
+Considere a hipótese nula - H0: θ = θ0. A estatística do teste é dada por:
+
+\[
+TRV = -2 \log \left( \frac{L(\hat{\theta_0})}{L(\hat{\theta})} \right) = 2 \left[ \log L(\hat{\theta}) - \log L(\hat{\theta_0}) \right]
+\]
+
+Sob H0, essa estatística tem uma distribuição aproximadamente qui-quadrado com p graus de liberdade. Para amostras grandes, a hipótese nula H0 é rejeitada a um nível de significância de 1-α se TRV > χ²p,1−α.
+
+
+
+```{r warning=FALSE}
+#teste da razao de verossimilhança
+
+TRV = 2*(logLW-logLE)
+1-pchisq(TRV,1)
+
 ```
 
