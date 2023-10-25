@@ -73,12 +73,12 @@ exponencial_vero = function(param){
   
 }
 
-results = optim(c(1),exponencial_vero,NULL,hessian = T,method = "Brent",lower = 0.0001,upper = 50)
+results_expo = optim(c(1),exponencial_vero,NULL,hessian = T,method = "Brent",lower = 0.0001,upper = 50)
 
-results$convergence
-results$par
-logLE = (-1)*results$value
-invRE = solve(results$hessian)
+results_expo$convergence
+results_expo$par
+logLE = (-1)*results_expo$value
+invRE = solve(results_expo$hessian)
 varianciaE = diag(invRE)
 eppE = sqrt(varianciaE)
 
@@ -97,3 +97,27 @@ summary(mwe)
 
 mex = survreg(Surv(tempo,censura)~1,dist = "exponential")
 summary(mex)
+
+# Metodo grafico para selecao de distribuicao
+
+St_exponencial = exp(-(KM$time/results_expo$par))
+
+St_weibull = exp(-(KM$time/results$par[1])^results$par[2])
+
+plot(KM,conf.int = F, mark.time = T)
+lines(c(0,KM$time),c(1, St_exponencial),col="red")
+lines(c(0,KM$time),c(1,St_weibull),col = "blue")
+legend(25,1, legend = c("KM","Exponencial", "Weibull"), lty = c(1, 1), col = c("black","red", "blue"))
+
+
+
+
+
+
+
+
+
+
+
+
+
