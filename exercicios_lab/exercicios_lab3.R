@@ -62,7 +62,7 @@ exponencial_vero = function(param){
   
   if((alfa>0)) {
     density = (gama/(alfa^gama))* tempo^(gama-1)*exp(-(tempo/alfa)^gama)
-    survival = exp(-(censura/alfa)^gama)
+    survival = exp(-(tempo/alfa)^gama)
     
     max = sum(censura * log(density) + (1-censura)*log(survival))
     return(-1*max)
