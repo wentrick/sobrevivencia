@@ -102,6 +102,7 @@ legend(15,1, legend = c("KM","Exponencial", "Weibull"), lty = c(1, 1), col = c("
 #usando fuancao ja pronta (nem todas as funcoes de sobrevivencia vao ter aplicadas no R logo é normal ter que fazer manulamente como antes)
 
 mwe = survreg(Surv(tempo,censura)~1,dist = "weibull")
+
 summary(mwe)
 
 mwe = survreg(Surv(log(tempo),censura)~1,dist = "extreme")
