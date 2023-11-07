@@ -1,0 +1,339 @@
+---
+title: "Exercicio Lab 5 Sobrevivencia"
+author: "Davi Wentrick Feijó"
+date: "2023-11-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse,survival,AdequacyModel,rms)
+```
+
+## Instruções para análise dos dados de Aids (adesão à Haart)
+
+#### Introdução
+Um estudo sobre o efeito da adesão ao tratamento antirretroviral na falha terapêutica (virológica, imunológica, clínica ou óbito) foi realizado com pacientes assistidos no Ipec/Fiocruz (Campos, 2009). A variável de interesse foi obtida a partir do Sistema de Controle Logístico de Medicamentos (SICLOM), desenvolvido para a dispensa de medicamentos antirretrovirais, e calculada como a razão entre o total de dias com atraso no contato com a farmácia para obter a medicação e os dias de acompanhamento entre a entrada no estudo e a falha terapêutica.
+
+#### Variáveis
+Variáveis explicativas:
+- linha: falha terapêutica
+- propatraso: proporção de dias sem medicamento/total de dias de acompanhamento
+- comprimdia: número médio de comprimidos/dia previstos
+
+
+#### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
+
+```{r}
+dados <- read.csv("adesao.txt", sep="") %>%
+  mutate(censura = status,
+         linha = as.factor(linha)) %>% 
+  select(-status)
+```
+
+```{r}
+head(dados)
+```
+
+#### 2. Fazer uma análise exploratória apenas da variável resposta: estimativa de Kaplan-Meier (KM), gráfico da função de risco acumulado e gráfico do Tempo Total em Teste (gráfico TTT).
+
+```{r}
+#modelo de sobrevivencia
+
+KM = survfit(Surv(dados$tempo,dados$censura)~1)
+
+plot(KM,conf.int = F, mark.time = T)
+```
+
+```{r}
+#funcao de risco
+HHt = -log(KM$surv)
+
+plot(stepfun(KM$time,c(0,HHt)),do.points = F)
+
+```
+
+```{r}
+#curva TTT
+TTT(dados$tempo)
+```
+
+
+#### 3. Fazer uma análise exploratória de cada covariável com a variável resposta: estimativa de Kaplan-Meier (KM), teste de comparação das curvas e gráfico do Tempo Total em Teste (gráfico TTT).
+
+```{r}
+# Resposta x Linha
+
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$linha)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+```
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ linha, data=dados, rho = 1)
+```
+
+```{r}
+#Linhas TTT por categorias da variavel linha
+dad2<-data.frame("tempo" = dados$tempo, "linha" = dados$linha)
+tempo1<-dad2[dad2$linha == "1",]
+TTT(tempo1$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+tempo2<-dad2[dad2$linha == "2",]
+TTT(tempo2$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+tempo3<-dad2[dad2$linha == "3",]
+TTT(tempo3$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+```
+
+
+#### 4. A partir dos resultados da etapa 3, selecionar as covariáveis que serão incluídas na próxima etapa, ou seja, que serão incluídas na modelagem estatística paramétrica. Sugestão: selecionar as covariáveis que apresentaram valores de p inferiores a 0,25 em pelo menos um dos testes de comparações de curvas de sobrevivência.
+
+Nossa unica variavel categorica para ser adicionada no modelo é a variavel "linhas" que ja foi testada e nao deu significativa, logo podemos retirar do modelo final
+
+
+#### 5. Com base nos resultados do gráfico TTT obtido na etapa 2 e os gráficos obtidos na etapa 3, discutir quais funções de densidade de probabilidade podem ser usadas para construir modelos de regressão paramétrico.
+
+#### 6. Considere as funções de densidade de probabilidade da etapa 5 e faça a seleção de qual densidade será usada para analisar a variável "Tempo". Utilize modelos que estão disponíveis na função `survreg`. Para fazer essa seleção utilize um método gráfico e medidas como AIC, AICc e BIC.
+
+
+
+```{r}
+#create a Surv object
+s <- with(dados,Surv(tempo,censura))
+## Kaplan-Meier estimator without grouping
+km.null <- survfit(data = dados, s ~ 1)
+plot(km.null, ylim = c(0.7, 1),conf.int = F)
+
+## Parametric estimation with Weibull distribution
+weibull.null <- survreg(data = dados, s ~ 1, dist = "weibull")
+lines(x = predict(weibull.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "red")
+
+## Parametric estimation with log-logistic distribution
+loglogistic.null <- survreg(data = dados, s ~ 1, dist = "loglogistic")
+lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "blue")
+
+## Parametric estimation with log-normal distribution
+lognormal.null <- survreg(data = lung, s ~ 1, dist = "lognorm")
+lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "green")
+
+## Add legends
+legend(x = "bottomleft",
+       legend = c("Kaplan-Meier", "Cox (Efron)", "Weibull", "log-logistic","log-normal"),
+       lwd = 2, bty = "n",
+       col = c("black", "purple", "red", "blue","green"))
+```
+
+Resultados Weibull
+```{r}
+#a funcao suvreg com weibull retorna o valor extremo, para isso temos que fazer uma transformacao para encontrar os parametrod da weibull padrao.
+n = length(dados$tempo) #n de obs
+
+gama_weibull = 1/weibull.null$scale
+
+alpha_weibull = exp(weibull.null$icoef[1])
+
+
+pws = 2 #descobrir o que é isso
+
+AICws = (-2*weibull.null$loglik[1])+(2*pws)
+
+AICcws = AICws + ((2*pws*(pws+1))/(n-pws-1))
+
+BICws = (-2*weibull.null$loglik[1])+(pws*log(n))
+
+medidasw = cbind(AICws,AICcws,BICws)
+```
+
+
+```{r echo=FALSE}
+cat("Weibull ~(",gama_weibull,",",alpha_weibull,")")
+
+medidasw
+
+summary(weibull.null)
+```
+
+Resultados Log-Normal
+```{r}
+sigma_lognormal = lognormal.null$scale
+
+mi_lognormal = lognormal.null$icoef[1]
+
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*lognormal.null$loglik[1])+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*lognormal.null$loglik[1])+(plns*log(n))
+
+medidalns = cbind(AIClns,AICclns,BIClns)
+```
+
+
+```{r echo=FALSE}
+cat("Log-Normal ~(",mi_lognormal,",",sigma_lognormal,")")
+
+medidalns
+
+summary(loglogistic.null)
+```
+
+Resultados Log-Logistica
+```{r}
+gama_loglogistica = 1/loglogistic.null$scale
+
+alpha_loglogistica = exp(loglogistic.null$icoef[1])
+
+
+plls = 2 #descobrir o que é isso
+
+AIClls = (-2*loglogistic.null$loglik[1])+(2*plls)
+
+AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
+
+BIClls = (-2*loglogistic.null$loglik[1])+(plls*log(n))
+
+medidalls = cbind(AIClls,AICclls,BIClls)
+```
+
+
+```{r echo=FALSE}
+cat("Log-Normal ~(",gama_loglogistica,",",alpha_loglogistica,")")
+
+medidalls
+
+summary(loglogistic.null)
+```
+
+Comparando as medidas
+
+```{r echo=FALSE}
+medidasw
+medidalns
+medidalls
+```
+
+
+
+#### 7. Utilize a densidade definida na etapa 6 e ajuste modelos de regressão com uma única covariável. (É possível utilizar o teste da Razão de Verossimilhança para verificar se a variável é de fato significativa)
+
+O output da funcao `summary()` nos da o p-valor do teste de verossimilhanca entre o modelo somente com intecepto e o modelo com a covariavel. A partir dele podemos identificar se a covariavel deve ou nao permanecer no modelo.
+
+```{r}
+lognormal.1 <- survreg(data = dados, s ~ linha, dist = "lognorm")
+summary(lognormal.1)
+```
+
+Com um p-valor de 0.45 a covariavel linha nao apresente significancia estatistica para o modelo, assim podemos retira-la.
+
+```{r}
+lognormal.2 <- survreg(data = dados, s ~ propatraso, dist = "lognorm")
+summary(lognormal.2)
+```
+
+Com um p-valor < 0.001 podemos deixar a variavel de proporcao de de atraso no modelo.
+
+```{r}
+lognormal.3 <- survreg(data = dados, s ~ comprimdia, dist = "lognorm")
+summary(lognormal.3)
+```
+
+O mesmo pode ser dito para a variavel de numero de comprimidos por dia que apresenta um p-valor de 0.025.
+
+#### 8. Construir um modelo completo de regressão com todas as covariáveis que foram significativas ao nível de 10% na etapa 7.
+
+```{r}
+lognormal.4 <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "lognorm")
+summary(lognormal.4)
+```
+
+#### 9. Excluir covariáveis não significativas (a nível de 10%) na etapa 8 uma de cada vez. Se essa etapa não se aplica a esses dados, passe para a etapa 10.
+
+Nao tivemos nenhuma variavel nao significatiava para o modelo
+
+#### 10. Retirar covariáveis significativas uma a uma do modelo completo (modelo da etapa 8). Fazer teste da Razão de Verossimilhança (TRV). Ou seja, retira a covariável "menos" significativa do modelo completo e compara esse modelo com o modelo completo usando TRV. Depois retira a segunda covariável "menos" significativa do modelo completo e compara esse modelo com o modelo completo usando TRV. E vai fazendo isso até testar a retirada individual de cada covariável. Então, serão comparados modelo completo e modelo completo sem uma covariável.
+
+Teste da razao de verossimilhanca do modelo com 2 covariaveis (propatras e comprimdia) com o modelo somente com propatraso
+
+```{r}
+lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm2 = lognormal.2$loglik[2] #log da verossimilhanca do modelo com propatraso
+
+TRV = 2*(lnorm4 - lnorm2)
+TRV
+
+1-pchisq(TRV,1)
+```
+
+A nivel de 10% ficamos com o modelo de 2 variaveis
+
+Teste da razao de verossimilhanca do modelo com 2 covariaveis (propatras e comprimdia) com o modelo somente com comprimdia
+
+```{r}
+lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm3 = lognormal.3$loglik[2] #log da verossimilhanca do modelo com comprimdia
+
+TRV = 2*(lnorm4 - lnorm3)
+TRV
+
+1-pchisq(TRV,1)
+```
+
+Aqui como o p-valor esta na regiao critica ficamos com o modelo de 2 variaveis tambem
+
+#### 11. Verificar quais variáveis na etapa 10 ficam no modelo. Ajustar um modelo com essas variáveis e incluir as variáveis não significativas na etapa 7.
+
+```{r}
+lognormal.5 <- survreg(data = dados, s ~ comprimdia + propatraso + linha, dist = "lognorm")
+summary(lognormal.5)
+```
+
+```{r}
+lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm5 = lognormal.5$loglik[2] #log da verossimilhanca do modelo com todas as variaveis
+
+TRV = 2*(lnorm5 - lnorm4)
+TRV
+
+1-pchisq(TRV,2)
+```
+
+Como nao rejeitamos H0 ficamos com o modelo sem a variavel linha (como esperado)
+
+Agora vamos testar um modelo com 2 variaveis e sua interacao com o modelo sem interacao
+
+```{r}
+lognormal.6 <- survreg(data = dados, s ~ comprimdia + propatraso + comprimdia*propatraso, dist = "lognorm")
+summary(lognormal.6)
+```
+
+```{r}
+lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm6 = lognormal.6$loglik[2] #log da verossimilhanca do modelo com 2 variaveis e interacao entre elas
+
+TRV = 2*(lnorm6 - lnorm4)
+TRV
+
+1-pchisq(TRV,1)
+```
+
+Como nao deu significativo ficamos com o modelo sem interacao
+
+#### 12. Comparar os modelos das etapas 10 e 11 e ajustar o modelo final.
+
+Nosso modelo final é o seguinte:
+
+```{r}
+lognormal.4 <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "lognorm")
+summary(lognormal.4)
+```
+
+podemos observar que ao aumentar a proporcao de atraso e o numero de comprimidos por dia nos diminuimos a probabilidade de sobrevivencia.

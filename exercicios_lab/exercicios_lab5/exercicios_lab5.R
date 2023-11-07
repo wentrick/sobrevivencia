@@ -93,4 +93,8 @@ legend(x = "topright",
        lwd = 2, bty = "n",
        col = c("black", "purple", "red", "blue"))
 
+#a funcao suvreg com weibull retorna o valor extremo, para isso temos que fazer uma transformacao para encontrar os parametrod da weibull padrao.
 
+gama_weibull = 1/weibull.null$icoef[1]
+
+alpha_weibull = exp(weibull.null$icoef[2])
