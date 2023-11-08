@@ -18,7 +18,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse,survival,ggfortify)
+pacman::p_load(tidyverse,survival,ggfortify,AdequacyModel)
 ```
 
 
@@ -148,6 +148,9 @@ Podemos perceber que existe uma queda grande na probabilidade de sobrevivencia a
 
 (f) Construa o grafico do tempo total em teste (curva TTT) e indique quais distribuicoes de probabilidade podem ser usadas para modelar os tempos de sobrevivencia de pacientes com cancer.
 
+```{r}
+TTT(tempo)
+```
 
 
 #### Exercıcio 3: Os dados apresentados na Tabela 2 representam o tempo (em dias) ate a morte de pacientes com cancer de ovario tratados na Mayo Clinic (Fleming, et al., 1980). O sımbolo + indica censura.
@@ -198,8 +201,30 @@ survdiff(Surv(tempo, censura) ~ grupo, data=dados, rho = 1)
 
 ##### (d) Construa o grafico do tempo total em teste (curva TTT), da H(t) e indique quais distribuicoes de probabilidade podem ser usadas para modelar os tempos de sobrevivencia de ratos.
 
+```{r}
+TTT(tempo)
+```
+
+```{r}
+#funcao de risco
+HHt = -log(KM$surv)
+plot(stepfun(sort(KM$time),c(0,HHt)),do.points = F)
+
+```
+
+
 #### Exercıcio 4: Um laboratorio interessado em investigar a relacao entre a dieta e o desenvolvimento de um tumor dividiu 90 ratos em tres grupos quanto ao tipo de dieta: baixo teor de gordura, saturada e nao saturada. Os ratos tinham a mesma idade, eram da mesma especie e tinham condicoes fısicas semelhantes. Os ratos foram observados por 200 dias e os tempos ate o surgimento de um tumor encontram-se na Tabela 3. O sımbolo + indica censura.
 
+```{r}
+tempo = c(140,177,50,65,86,153,181,191,77,84,87,56,66,73,119,140,rep(200,14),124,58,56,68,79,89,107,86,142,110,96,142,86,75,117,98,105,126,43,46,81,133,165,170,rep(200,6),112,68,84,109,153,143,60,70,98,164,63,63,77,91,91,66,70,77,63,66,66,94,101,105,108,112,115,126,161,178)
+censura = c(rep(0,15),rep(1,15),rep(0,23),rep(1,7),rep(0,30))
+grupo = c(rep(1,30),rep(2,30),rep(3,30))
 
+dados = data.frame(tempo,censura,grupo) %>%
+  arrange(tempo)%>%
+  mutate(grupo = as.factor(grupo))
+
+
+```
 
 
