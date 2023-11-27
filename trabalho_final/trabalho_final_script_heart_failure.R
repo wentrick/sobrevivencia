@@ -31,7 +31,7 @@ HHt = -log(KM$surv)
 plot(stepfun(KM$time,c(0,HHt)),do.points = F)
 
 
-
+autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 
 #curva TTT
 TTT(dados$tempo)

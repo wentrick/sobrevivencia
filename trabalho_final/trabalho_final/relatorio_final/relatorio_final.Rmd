@@ -1,0 +1,331 @@
+---
+title: "Document title"
+subtitle: "Subtitle"
+author: "Davi Wentrick Feijó -200016806, Micael Papa - 000000000"
+header_left: "Departamento de Estatistica"
+header_right: "UNB"
+date: \today
+fontsize: 11pt
+german: false # default is English
+bibliography: bib/references.bib, bib/packages.bib
+bibliographystyle: bib/bibstyle.bst
+abstract: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut elit odio. Donec fermentum tellus neque, vitae fringilla orci pretium vitae. Fusce maximus finibus facilisis. Donec ut ullamcorper turpis. Donec ut porta ipsum. Nullam cursus mauris a sapien ornare pulvinar. Aenean malesuada molestie erat quis mattis. Praesent scelerisque posuere faucibus. Praesent nunc nulla, ullamcorper ut ullamcorper sed, molestie ut est. Donec consequat libero nisi, non semper velit vulputate et. Quisque eleifend tincidunt ligula, bibendum finibus massa cursus eget. Curabitur aliquet vehicula quam non pulvinar. Aliquam facilisis tortor nec purus finibus, sit amet elementum eros sodales. Ut porta porttitor vestibulum."
+output: 
+  UHHformats::pdf_simple:
+    font: "Helvetica" # alternative: "TheSansUHH"  
+---
+
+```{r setup, include = FALSE}
+# settings --> keep this chunk as it is!
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, 
+  warning = FALSE, error = FALSE, cache = TRUE,
+  fig.path='figs/', cache.path = 'cache/')
+```
+
+```{r load-packages, include = FALSE}
+# packages
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger)
+```
+
+```{r generate-package-refs, include=FALSE}
+# Create a bib database for R packages used above
+# NOTE: RUN THIS CODE CHUNK MANUALLY TO CREATE FILE BEFORE KNITTING
+knitr::write_bib(
+  x = c(.packages(), 'bookdown', 'rmarkdown', 'UHHformats',
+    # Add here now all packages that are loaded above:
+    'knitr', 'kableExtra', 'xtable', 'tidyverse'),
+  file = 'bib/packages.bib'
+)
+```
+
+<!-- This is how you can define comments in an .Rmd file (outside the R code snippets) -->
+
+\newpage
+
+# Introdução
+
+\newpage
+
+# Metodologia
+
+\newpage
+
+# Resultados
+
+## Analise exploratoria 
+
+Antes de ajustar o modelo,é necessario estudarmos o comportamento dos dados antes para pode identificar qual distribuicao sera mais adequada e ja realizar uma seleção das variaveis categoricas que sao significativas para o modelo final.
+
+```{r}
+dados <- read_csv("heart_failure_clinical_records_dataset.csv") %>%
+  mutate(censura = DEATH_EVENT,
+         tempo = time,
+         age = round(age,0)) %>% 
+  select(-c(DEATH_EVENT,time))
+
+head(dados)
+```
+
+Modelo de sobrevivencia nao parametrico de Kaplan-Meier
+
+```{r}
+KM = survfit(Surv(dados$tempo,dados$censura)~1)
+
+autoplot(KM)
+```
+
+A funcao de risco
+
+```{r}
+autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
+```
+
+
+```{r}
+#curva TTT
+TTT(dados$tempo)
+```
+
+\newpage
+
+### Analise das Variaveis Categoricas
+
+#### Variavel Sex 
+
+
+Vamos comparar as curvas de sobrevivencias dividas por Sexo, com o objetivo de ver se essa variavel influencia na curva de sobrevivencia. Em seguida iremos fazer um teste para verificar a diferenca entre as curvas.
+
+```{r}
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$sex)
+
+#plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+
+autoplot(KM)
+```
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ sex, data=dados, rho = 1)
+```
+
+Podemos notar que tanto pelo grafico quanto pelo teste, com p-valor = 0.9, que a variavel Sexo nao parece influenciar nas curvas de sobrevivencia
+
+\newpage
+
+#### Variavel Diabetes
+
+
+
+```{r}
+# Resposta x diabetes
+
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$diabetes)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+```
+
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
+```
+
+\newpage
+
+#### Variavel Anaemia
+
+```{r}
+# Resposta x anaemia
+
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$diabetes)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+```
+
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
+```
+
+\newpage
+
+#### Variavel High Blood Pressure
+
+```{r}
+# Resposta x blood pressure
+
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$high_blood_pressure)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+```
+
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ high_blood_pressure, data=dados, rho = 1)
+```
+
+\newpage
+
+#### Variavel Smoking
+
+```{r}
+# Resposta x smoking
+
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$smoking)
+
+plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+```
+
+
+```{r}
+#teste para diferenca de curvas
+survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
+```
+
+
+### Curvas TTT
+
+
+```{r}
+#Linhas TTT por categorias da variavel linha
+par(mfrow = c(1,2))
+dad2<-data.frame("tempo" = dados$tempo, "high_blood_pressure" = dados$high_blood_pressure)
+tempo1<-dad2[dad2$high_blood_pressure == "0",]
+TTT(tempo1$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+tempo2<-dad2[dad2$high_blood_pressure == "1",]
+TTT(tempo2$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+```
+
+### Seleçao da distribuicao 
+
+```{r}
+#create a Surv object
+s <- with(dados,Surv(tempo,censura))
+## Kaplan-Meier estimator without grouping
+km.null <- survfit(data = dados, s ~ 1)
+plot(km.null, ylim = c(0.5, 1),conf.int = F)
+
+## Parametric estimation with Weibull distribution
+weibull.null <- survreg(data = dados, s ~ 1, dist = "weibull")
+lines(x = predict(weibull.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "red")
+
+## Parametric estimation with log-logistic distribution
+loglogistic.null <- survreg(data = dados, s ~ 1, dist = "loglogistic")
+lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "blue")
+
+## Parametric estimation with log-normal distribution
+lognormal.null <- survreg(data = lung, s ~ 1, dist = "lognorm")
+lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "green")
+
+## Add legends
+legend(x = "bottomleft",
+       legend = c("Kaplan-Meier", "Cox (Efron)", "Weibull", "log-logistic","log-normal"),
+       lwd = 2, bty = "n",
+       col = c("black", "purple", "red", "blue","green"))
+```
+
+
+```{r}
+#a funcao suvreg com weibull retorna o valor extremo, para isso temos que fazer uma transformacao para encontrar os parametrod da weibull padrao.
+n = length(dados$tempo) #n de obs
+
+gama_weibull = 1/weibull.null$scale
+
+alpha_weibull = exp(weibull.null$icoef[1])
+
+
+pws = 2 #numero de parametros da distribuicao
+
+AICws = (-2*weibull.null$loglik[1])+(2*pws)
+
+AICcws = AICws + ((2*pws*(pws+1))/(n-pws-1))
+
+BICws = (-2*weibull.null$loglik[1])+(pws*log(n))
+
+medidasw = cbind(AICws,AICcws,BICws)
+```
+
+
+```{r}
+cat("Weibull ~(",gama_weibull,",",alpha_weibull,")")
+
+medidasw
+
+summary(weibull.null)
+```
+
+
+```{r}
+sigma_lognormal = lognormal.null$scale
+
+mi_lognormal = lognormal.null$icoef[1]
+
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*lognormal.null$loglik[1])+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*lognormal.null$loglik[1])+(plns*log(n))
+
+medidalns = cbind(AIClns,AICclns,BIClns)
+```
+
+
+```{r}
+cat("Log-Normal ~(",mi_lognormal,",",sigma_lognormal,")")
+
+medidalns
+
+summary(loglogistic.null)
+```
+
+
+```{r}
+gama_loglogistica = 1/loglogistic.null$scale
+
+alpha_loglogistica = exp(loglogistic.null$icoef[1])
+
+
+plls = 2 #descobrir o que é isso
+
+AIClls = (-2*loglogistic.null$loglik[1])+(2*plls)
+
+AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
+
+BIClls = (-2*loglogistic.null$loglik[1])+(plls*log(n))
+
+medidalls = cbind(AIClls,AICclls,BIClls)
+```
+
+
+```{r}
+cat("Log-Normal ~(",gama_loglogistica,",",alpha_loglogistica,")")
+
+medidalls
+
+summary(loglogistic.null)
+```
+
+
+```{r}
+medidasw
+medidalns
+medidalls
+```
+
+# Conclusão
+
+# Referencia Bibliografica
+
+
+
