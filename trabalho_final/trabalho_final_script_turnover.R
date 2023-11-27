@@ -1,4 +1,4 @@
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,corrplot)
 
 #### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
 
@@ -214,13 +214,17 @@ medidasw
 medidalns
 medidalls
 
+######
+
+M = cor(dados %>% select(2,10,11,12,13,14))
+corrplot(M, method = 'number')
 
 ######
 
-lognormal.1 <- survreg(data = dados, s ~ linha, dist = "lognorm")
+lognormal.1 <- survreg(data = dados, s ~ age+extraversion+independ+selfcontrol+anxiety+novator, dist = "lognorm")
 summary(lognormal.1)
 
-lognormal.2 <- survreg(data = dados, s ~ propatraso, dist = "lognorm")
+lognormal.2 <- survreg(data = dados, s ~ age+selfcontrol, dist = "lognorm")
 summary(lognormal.2)
 
 lognormal.3 <- survreg(data = dados, s ~ comprimdia, dist = "lognorm")
@@ -230,8 +234,8 @@ summary(lognormal.3)
 lognormal.4 <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "lognorm")
 summary(lognormal.4)
 
-lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm2 = lognormal.2$loglik[2] #log da verossimilhanca do modelo com propatraso
+lnorm4 = lognormal.1$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm2 = lognormal.null$loglik[2] #log da verossimilhanca do modelo com propatraso
 
 TRV = 2*(lnorm4 - lnorm2)
 TRV

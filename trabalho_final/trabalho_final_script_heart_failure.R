@@ -24,17 +24,18 @@ KM = survfit(Surv(dados$tempo,dados$censura)~1)
 plot(KM,conf.int = F, mark.time = T)
 
 
-
+summary(KM)
 #funcao de risco
 HHt = -log(KM$surv)
 
 plot(stepfun(KM$time,c(0,HHt)),do.points = F)
 
 
-autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
+#autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 
 #curva TTT
 TTT(dados$tempo)
+
 
 
 # Resposta x Sex
@@ -60,12 +61,12 @@ survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 
 # Resposta x anaemia
 
-KM = survfit(Surv(dados$tempo,dados$censura)~dados$diabetes)
+KM = survfit(Surv(dados$tempo,dados$censura)~dados$anaemia)
 
 plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 
 #teste para diferenca de curvas
-survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
+survdiff(Surv(tempo, censura) ~ anaemia, data=dados, rho = 1)
 
 
 # Resposta x blood pressure
@@ -97,6 +98,7 @@ tempo1<-dad2[dad2$high_blood_pressure == "0",]
 TTT(tempo1$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
 tempo2<-dad2[dad2$high_blood_pressure == "1",]
 TTT(tempo2$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
+
 
 
 #create a Surv object
@@ -206,7 +208,7 @@ medidalls = cbind(AIClls,AICclls,BIClls)
 
 
 
-cat("Log-Normal ~(",gama_loglogistica,",",alpha_loglogistica,")")
+cat("Log-Logistica ~(",gama_loglogistica,",",alpha_loglogistica,")")
 
 medidalls
 
@@ -221,17 +223,16 @@ medidalls
 
 ######
 
-lognormal.1 <- survreg(data = dados, s ~ linha, dist = "lognorm")
+lognormal.1 <- survreg(data = dados, s ~ 1, dist = "lognorm")
 summary(lognormal.1)
 
-lognormal.2 <- survreg(data = dados, s ~ propatraso, dist = "lognorm")
+lognormal.2 <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking  , dist = "lognorm")
 summary(lognormal.2)
 
-lognormal.3 <- survreg(data = dados, s ~ comprimdia, dist = "lognorm")
+lognormal.3 <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
 summary(lognormal.3)
 
-
-lognormal.4 <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "lognorm")
+lognormal.4 <- survreg(data = dados, s ~ , dist = "lognorm")
 summary(lognormal.4)
 
 lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
@@ -243,46 +244,54 @@ TRV
 1-pchisq(TRV,1)
 
 
+###################
+
+#create a Surv object
+s <- with(dados,Surv(tempo,censura))
+## Kaplan-Meier estimator without grouping
+km.null <- survfit(data = dados, s ~ 1)
+plot(km.null, ylim = c(0, 1),conf.int = F)
+
+## Parametric estimation with log-logistic distribution
+lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, dist = "weibull")
+lines(x = predict(lognormal.completa, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "red")
+
+## Parametric estimation with log-normal distribution
+lognormal.reduzida <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+lines(x = predict(lognormal.reduzida, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "blue")
 
 
-lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm3 = lognormal.3$loglik[2] #log da verossimilhanca do modelo com comprimdia
-
-TRV = 2*(lnorm4 - lnorm3)
-TRV
-
-1-pchisq(TRV,1)
+## Add legends
+legend(x = "bottomleft",
+       legend = c("Kaplan-Meier", "log-normal completa","log-normal reduzida"),
+       lwd = 2, bty = "n",
+       col = c("black", "red", "blue","green"))
 
 
 
 
 
 
-lognormal.5 <- survreg(data = dados, s ~ comprimdia + propatraso + linha, dist = "lognorm")
-summary(lognormal.5)
-
-lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm5 = lognormal.5$loglik[2] #log da verossimilhanca do modelo com todas as variaveis
-
-TRV = 2*(lnorm5 - lnorm4)
-TRV
-
-1-pchisq(TRV,2)
-
-lognormal.6 <- survreg(data = dados, s ~ comprimdia + propatraso + comprimdia*propatraso, dist = "lognorm")
-summary(lognormal.6)
-
-lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm6 = lognormal.6$loglik[2] #log da verossimilhanca do modelo com 2 variaveis e interacao entre elas
-
-TRV = 2*(lnorm6 - lnorm4)
-TRV
-
-1-pchisq(TRV,1)
 
 
-lognormal.4 <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "lognorm")
-summary(lognormal.4)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

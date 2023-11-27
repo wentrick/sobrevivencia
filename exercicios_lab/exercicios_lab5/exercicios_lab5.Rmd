@@ -337,3 +337,25 @@ summary(lognormal.4)
 ```
 
 podemos observar que ao aumentar a proporcao de atraso e o numero de comprimidos por dia nos diminuimos a probabilidade de sobrevivencia.
+
+#### TESTE
+
+```{r}
+#create a Surv object
+s <- with(dados,Surv(tempo,censura))
+## Kaplan-Meier estimator without grouping
+km.null <- survfit(data = dados, s ~ 1)
+plot(km.null, ylim = c(0.7, 1),conf.int = F)
+
+## Parametric estimation with log-normal distribution
+lines(x = predict(lognormal.4, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "red")
+
+## Add legends
+legend(x = "bottomleft",
+       legend = c("Kaplan-Meier","log-normal (modelo final)"),
+       lwd = 2, bty = "n",
+       col = c("black", "red"))
+```
+

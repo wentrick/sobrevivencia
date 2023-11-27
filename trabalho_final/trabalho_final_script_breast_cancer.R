@@ -2,7 +2,6 @@ pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms)
 
 #### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
 
-
 dados <- read_csv("dados/Breast Cancer METABRIC.csv") %>%
   mutate(censura = `Overall Survival Status`,
          tempo = `Overall Survival (Months)`,
