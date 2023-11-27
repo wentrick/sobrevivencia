@@ -9,19 +9,13 @@ dados <- read_csv("dados/Breast Cancer METABRIC.csv") %>%
          censura = recode(censura, 'Living' = 0, "Deceased" = 1)) %>% 
   select(-c(`Overall Survival Status`,`Overall Survival (Months)`))
 
-
-
-
 head(dados)
-
-
 
 #modelo de sobrevivencia
 
 KM = survfit(Surv(dados$tempo,dados$censura)~1)
 
 plot(KM,conf.int = F, mark.time = T)
-
 
 # Resposta x breast surgery
 
@@ -32,7 +26,6 @@ plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 #teste para diferenca de curvas
 survdiff(Surv(tempo, censura) ~ dados$`Type of Breast Surgery`, data=dados, rho = 1)
 
-
 # Resposta x Celullarity
 
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$Cellularity)
@@ -41,8 +34,6 @@ plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 
 #teste para diferenca de curvas
 survdiff(Surv(tempo, censura) ~ dados$Cellularity, data=dados, rho = 1)
-
-
 
 # Resposta x chemotherapy
 
