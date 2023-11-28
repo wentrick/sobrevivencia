@@ -125,11 +125,17 @@ lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.0
       y = rev(seq(0.01, 0.99, by = 0.01)),
       col = "green")
 
+## Parametric estimation with log-normal distribution
+normal.null <- survreg(data = lung, s ~ 1, dist = "gaussian")
+lines(x = predict(normal.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "purple")
+
 ## Add legends
 legend(x = "bottomleft",
-       legend = c("Kaplan-Meier", "Cox (Efron)", "Weibull", "log-logistic","log-normal"),
+       legend = c("Kaplan-Meier", "Weibull", "log-logistic","log-normal","normal"),
        lwd = 2, bty = "n",
-       col = c("black", "purple", "red", "blue","green"))
+       col = c("black", "red", "blue","green","purple"))
 
 
 
@@ -241,7 +247,7 @@ lnorm2 = lognormal.2$loglik[2] #log da verossimilhanca do modelo com propatraso
 TRV = 2*(lnorm4 - lnorm2)
 TRV
 
-1-pchisq(TRV,1)
+1-pchisq(TRV,4)
 
 
 ###################
@@ -253,7 +259,7 @@ km.null <- survfit(data = dados, s ~ 1)
 plot(km.null, ylim = c(0, 1),conf.int = F)
 
 ## Parametric estimation with log-logistic distribution
-lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, dist = "weibull")
+lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, dist = "lognorm")
 lines(x = predict(lognormal.completa, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
       y = rev(seq(0.01, 0.99, by = 0.01)),
       col = "red")
@@ -271,23 +277,82 @@ legend(x = "bottomleft",
        lwd = 2, bty = "n",
        col = c("black", "red", "blue","green"))
 
+summary(lognormal.reduzida)
 
 
+### residuos de cox snell
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
 
 
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
+### teste 2
+s <- with(dados,Surv(tempo,censura))
+
+psmE <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="exponential",data=dados)
+residE <- residuals(psmE)
+psmW <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="weibull",data=dados)
+residW <- residuals(psmW)
+psmLN <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="lognormal",data=dados)
+residLN <- residuals(psmLN)
+psmLL <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="loglogistic",data=dados)
+residLL <- residuals(psmLL)
+par(mfrow=c(2,2))
+survplot(residE,main="Exponential",ylab="Complement of residual CDF")
+survplot(residW,main="Weibull",ylab="Complement of residual CDF")
+survplot(residLN,main="Lognormal",ylab="Complement of residual CDF")
+survplot(residLL,main="Log Logistic",ylab="Complement of residual CDF")
 
 
+### teste 3
+
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = residuals(lognormal.reduzida)
 
 
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
+### teste 4
 
+#rC : Cox-Snell residuals
+#rM : Martingale residuals 
+#rD : Deviance residuals
 
+rC<-exp(((lognormal.reduzida$y[,1])-log(predict(lognormal.reduzida,dados,na.action = "na.omit")))/lognormal.reduzida$scale)
+rM<-lognormal.reduzida$y[,2]-rC
+rD<-sign(rM)*sqrt(-2*(rM+lognormal.reduzida$y[,2]*log(rC)))  # -residuals(fit,type='deviance')
 
+mean(rC)
+var(rC)
 
-
+qqplot((qexp(ppoints(length(rC)))),(rC));qqline(rC, distribution=qexp,col="red", lty=2)
 
 
 

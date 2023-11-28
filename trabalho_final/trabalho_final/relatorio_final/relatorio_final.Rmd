@@ -66,7 +66,7 @@ dados <- read_csv("heart_failure_clinical_records_dataset.csv") %>%
 head(dados)
 ```
 
-Modelo de sobrevivencia nao parametrico de Kaplan-Meier
+### Modelo de sobrevivencia nao parametrico de Kaplan-Meier
 
 ```{r}
 KM = survfit(Surv(dados$tempo,dados$censura)~1)
@@ -74,13 +74,15 @@ KM = survfit(Surv(dados$tempo,dados$censura)~1)
 autoplot(KM)
 ```
 
-A funcao de risco
+### A funcao de risco acumulado
 
 ```{r}
 autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 ```
 
+### Curva TTT
 
+Grafico do Tempo Total sobre Teste
 ```{r}
 #curva TTT
 TTT(dados$tempo)
@@ -92,10 +94,9 @@ TTT(dados$tempo)
 
 #### Variavel Sex 
 
-
 Vamos comparar as curvas de sobrevivencias dividas por Sexo, com o objetivo de ver se essa variavel influencia na curva de sobrevivencia. Em seguida iremos fazer um teste para verificar a diferenca entre as curvas.
 
-```{r}
+```{r, fig.align = 'center'}
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$sex)
 
 #plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
@@ -114,14 +115,15 @@ Podemos notar que tanto pelo grafico quanto pelo teste, com p-valor = 0.9, que a
 
 #### Variavel Diabetes
 
+Comparacao entre curvas de sobrevivencia da variavel Dibetes
 
-
-```{r}
+```{r, fig.align = 'center'}
 # Resposta x diabetes
 
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$diabetes)
 
-plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+#plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+autoplot(KM)
 ```
 
 
@@ -129,17 +131,21 @@ plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 #teste para diferenca de curvas
 survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 ```
+Pelo p-valor de 0.9 pode assumir que nao existe diferenca entre as curvas
 
 \newpage
 
 #### Variavel Anaemia
 
-```{r}
+Comparacao das curvas entre os grupo que tem Anemia e os que nao tem.
+
+```{r, fig.align = 'center'}
 # Resposta x anaemia
 
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$diabetes)
 
-plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+#plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+autoplot(KM)
 ```
 
 
@@ -148,16 +154,20 @@ plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 ```
 
+Pelo p-valor de 0.9 podemos assumir que nao ha diferenca entre as categorias
+
 \newpage
 
 #### Variavel High Blood Pressure
 
-```{r}
+
+```{r, fig.align = 'center'}
 # Resposta x blood pressure
 
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$high_blood_pressure)
 
-plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+#plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+autoplot(KM)
 ```
 
 
@@ -170,12 +180,13 @@ survdiff(Surv(tempo, censura) ~ high_blood_pressure, data=dados, rho = 1)
 
 #### Variavel Smoking
 
-```{r}
+```{r, fig.align = 'center'}
 # Resposta x smoking
 
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$smoking)
 
-plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+#plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
+autoplot(KM)
 ```
 
 
@@ -185,20 +196,11 @@ survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
 ```
 
 
-### Curvas TTT
 
-
-```{r}
-#Linhas TTT por categorias da variavel linha
-par(mfrow = c(1,2))
-dad2<-data.frame("tempo" = dados$tempo, "high_blood_pressure" = dados$high_blood_pressure)
-tempo1<-dad2[dad2$high_blood_pressure == "0",]
-TTT(tempo1$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
-tempo2<-dad2[dad2$high_blood_pressure == "1",]
-TTT(tempo2$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
-```
 
 ### Seleçao da distribuicao 
+
+Vamos ajustar algumas distribuicoes sobre o grafico de Kaplan-Meier para selecionar aquela que se adapta melhor a curva. Alem disso estaremos verificando os valores AIC, AIC corrigido e BIC para deicidir a distribuicao a ser utilizada.
 
 ```{r}
 #create a Surv object
