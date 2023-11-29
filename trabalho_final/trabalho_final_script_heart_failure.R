@@ -1,4 +1,4 @@
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,BART,randomForestSRC)
 
 #### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
 
@@ -323,7 +323,7 @@ survplot(residLL,main="Log Logistic",ylab="Complement of residual CDF")
 y = log(dados$tempo)
 mip = lognormal.reduzida$linear.predictors
 Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = residuals(lognormal.reduzida)
+ei = (-log(Smod))
 
 
 Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
@@ -355,6 +355,59 @@ var(rC)
 qqplot((qexp(ppoints(length(rC)))),(rC));qqline(rC, distribution=qexp,col="red", lty=2)
 
 
+####### Selecao de variavel testes
+
+names. <- names(dados)[-(12:13)]
+status1 <- dados$censura
+X <- as.matrix(dados)[ , names.]
+vars=srstepwise(X, dados$tempo, status1,dist = "lognorm")
+print(names.[vars])
+
+vars
+
+lognormal.reduzida2 <- survreg(data = dados, s ~ age+high_blood_pressure, dist = "lognorm")
+summary(lognormal.reduzida2)
+
+
+lnorm4 = lognormal.reduzida$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm2 = lognormal.reduzida2$loglik[2] #log da verossimilhanca do modelo com propatraso
+
+TRV = 2*(lnorm4 - lnorm2)
+TRV
+
+1-pchisq(TRV,5)
+
+###############
+
+## ------------------------------------------------------------
+## Minimal depth variable selection
+## survival analysis
+## use larger node size which is better for minimal depth
+## ------------------------------------------------------------
+s <- with(dados,Surv(tempo,censura))
+pbc.obj <- rfsrc(Surv(tempo,censura) ~ ., dados, nodesize = 20, importance = TRUE)
+
+# default call corresponds to minimal depth selection
+vs.pbc <- var.select(object = pbc.obj)
+topvars <- vs.pbc$topvars
+
+# the above is equivalent to
+max.subtree(pbc.obj)$topvars
+
+
+lognormal.reduzida3 <- survreg(data = dados, s ~ ejection_fraction+serum_creatinine+age+serum_sodium , dist = "lognorm")
+summary(lognormal.reduzida2)
+
+
+lnorm_nested = lognormal.reduzida2$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
+lnorm_complex = lognormal.reduzida3$loglik[2] #log da verossimilhanca do modelo com propatraso
+df = abs(lognormal.reduzida3$df-lognormal.reduzida2$df)
+
+
+TRV = 2*(lnorm_nested - lnorm_complex)
+TRV
+
+1-pchisq(TRV,df)
 
 
 

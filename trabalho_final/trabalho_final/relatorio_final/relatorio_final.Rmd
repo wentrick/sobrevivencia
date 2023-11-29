@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE,
 
 ```{r load-packages, include = FALSE}
 # packages
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger,BART,randomForestSRC)
 ```
 
 ```{r generate-package-refs, include=FALSE}
@@ -44,9 +44,241 @@ knitr::write_bib(
 
 # Introdução
 
+A pesquisa e o estudo da insuficiência cardíaca representam um campo crucial na área da saúde, especialmente considerando o cenário contemporâneo. A insuficiência cardíaca é uma condição crônica debilitante que afeta milhões de pessoas globalmente, resultando em um ônus significativo para os sistemas de saúde e afetando diretamente a qualidade de vida dos pacientes. Neste contexto, a compreensão aprofundada dos mecanismos subjacentes, fatores de risco, estratégias de prevenção e tratamento é fundamental.
+
+No mundo atual, onde as doenças cardiovasculares continuam a ser uma das principais causas de morbidade e mortalidade, a insuficiência cardíaca emerge como um desafio complexo e premente. A interseção entre fatores de risco modificáveis, como dieta, estilo de vida, poluição ambiental e condições socioeconômicas, tem um impacto direto na incidência e na progressão dessa condição cardíaca.
+
+Além disso, a crescente longevidade da população e a prevalência de comorbidades relacionadas, como diabetes e hipertensão, têm contribuído para um aumento substancial na incidência de insuficiência cardíaca. Essa realidade destaca a importância crítica de investigar não apenas os aspectos biomédicos, mas também os contextos sociais, comportamentais e ambientais que desempenham um papel na manifestação e gestão dessa condição.
+
+Os avanços na pesquisa, diagnóstico e terapia oferecem uma perspectiva promissora, mas ainda há lacunas significativas a serem preenchidas. A exploração contínua dos mecanismos moleculares, novas terapias farmacológicas, intervenções não farmacológicas e abordagens inovadoras de gerenciamento são áreas cruciais que exigem uma atenção contínua.
+
+Portanto, compreender a insuficiência cardíaca não apenas como uma entidade clínica isolada, mas como um desafio multifacetado que requer abordagens interdisciplinares e holísticas, torna-se essencial. Esta compreensão abrangente é crucial para orientar políticas de saúde pública, estratégias de prevenção e intervenções clínicas mais eficazes, visando não apenas tratar, mas também mitigar os fatores de risco associados a essa condição.
+
+Em resumo, o estudo da insuficiência cardíaca é um imperativo no panorama atual da saúde, exigindo uma abordagem abrangente e colaborativa para mitigar seu impacto, melhorar a qualidade de vida dos pacientes e aliviar a carga que essa condição exerce sobre os sistemas de saúde em todo o mundo. O presente trabalho busca estudar, dadas as devidas proporções, as causas do acréscimo e da recorrência de pacientes com insuficiência cardíaca por intermédio de uma modelagem estatística imbuída de metodologias de análises de sobrevivência em conjunto com modelos lineares generalizados. 
+
 \newpage
 
 # Metodologia
+
+
+## Sobre o dataset
+
+Doenças cardiovasculares (DCVs) são a principal causa de morte globalmente, tirando uma estimativa de 17,9 milhões de vidas a cada ano, o que representa 31\% de todas as mortes no mundo.
+
+A insuficiência cardíaca é um evento comum causado por DCVs, e este conjunto de dados contém 12 características que podem ser usadas para prever a mortalidade por insuficiência cardíaca. Explicitando as características: 
+
+Variáveis booleanas: 
+\begin{itemize}
+    \item Death event : 
+Se o paciente faleceu durante o período de acompanhamento.
+     \item Smoking : Se o paciente é fumante. 
+     \item Sexo
+     \item High blood pressure : Se o paciente tem hipertensão.
+     \item Diabetes : Se o paciente tem diabetes.
+     \item Anemia : Se o paciente tem anemia. 
+\end{itemize}
+
+Variáveis Numéricas:
+\begin{itemize}
+    \item Idade
+    \item Creatinine phosphokinase: Nível da enzima CPK no sangue (mcg/L)
+    \item ejection fraction :
+Percentual de sangue deixando o coração a cada contração (porcentagem) 
+    \item platelets : 
+Plaquetas no sangue (quiloplaquetas/mL).
+    \item serum creatinine : 
+Nível de creatinina sérica no sangue (mg/dL).
+    \item serum sodium : 
+Nível de sódio sérico no sangue (mEq/L)
+    \item time
+\end{itemize}
+
+A maioria das doenças cardiovasculares pode ser prevenida ao abordar fatores de risco comportamentais, como o uso de tabaco, dieta não saudável e obesidade, inatividade física e uso prejudicial de álcool, por meio de estratégias abrangentes para toda a população.
+
+Pessoas com doenças cardiovasculares ou que estão em alto risco cardiovascular (devido à presença de um ou mais fatores de risco, como hipertensão, diabetes, hiperlipidemia ou doença já estabelecida) precisam de detecção precoce e manejo, onde um modelo de aprendizado de máquina pode ser de grande ajuda.
+
+Dentre suas variáveis temos: 
+- Idade
+- Anemia : Diminuição de glóbulos vermelhos ou hemoglobina (variável booleana)
+-    : Nível da enzima CPK no sangue (mcg/L)
+
+## Função de sobrevivência - Log normal
+
+A função de sobrevivência de uma distribuição log-normal descreve a probabilidade de uma variável aleatória contínua exceder um determinado valor ao longo do tempo. Na distribuição log-normal, os valores são logaritmicamente distribuídos, o que significa que o logaritmo dos dados segue uma distribuição normal.
+
+Essa função é usada para modelar dados onde os valores têm uma distribuição assimétrica positiva e é útil em muitos contextos, como na análise de tempo de vida de produtos, estudos epidemiológicos ou financeiros. A função de sobrevivência da distribuição log-normal permite calcular a probabilidade de um evento ocorrer além de um determinado ponto no tempo, levando em consideração a natureza dos dados logarítmicos.
+
+
+
+\[ S(t) = 1 - \Phi \left(\frac{\ln(t) - \mu}{\sigma}\right) \]
+
+Onde:
+
+\begin{enumerate}
+    \item S(t)  é a função de sobrevivência em um tempo  t ,
+    \item $\Phi$ é a função de distribuição acumulada da distribuição normal padrão,
+    \item $\mu$ é a média da distribuição log-normal, 
+    \item $\sigma$ é o desvio padrão da distribuição log-normal,
+    \item $\ln(t)$  é o logaritmo natural de t, o tempo.
+\end{enumerate}
+
+
+## Kaplan-Meier
+
+O método de Kaplan-Meier é uma técnica estatística usada para estimar a função de sobrevivência a partir de dados de tempo até um evento ocorrer. É frequentemente aplicado em estudos de sobrevivência ou análise de tempo até um evento (como tempo até a morte, falha de equipamentos, etc.).
+ Funciona calculando as estimativas de probabilidade de sobrevivência em intervalos de tempo, ajustando os cálculos à medida que os eventos ocorrem ou os participantes são censurados. Essas estimativas são representadas graficamente na forma de uma curva de sobrevivência, que mostra a probabilidade de um indivíduo sobreviver além de um determinado ponto no tempo.
+ Além disso, o método de Kaplan-Meier permite a comparação de diferentes grupos de indivíduos para avaliar se há diferenças significativas na função de sobrevivência entre eles. Isso pode ser feito usando testes estatísticos, como o teste log-rank, para determinar se as curvas de sobrevivência são estatisticamente diferentes entre os grupos.
+
+A função Kaplan-Meier pode ser representada em LaTeX da seguinte maneira:
+
+\[ \hat{S}(t) = \prod_{i:t_i \leq t} \left(1 - \frac{d_i}{n_i}\right) \]
+
+Nesta fórmula:
+
+\begin{enumerate}
+\item-  $\hat{S}(t)$  é a estimativa da função de sobrevivência em um tempo  t .
+\item- $t_{i}$  representa os tempos de eventos.
+\item-  $d_{i}$  é o número de eventos no tempo   $t_{i}$  .
+\item  $n_{i}$  é o número de indivíduos em risco no tempo  $t_{i}$ .
+\end{enumerate}
+
+
+## Função Hazard
+ 
+A função hazard, na teoria da sobrevivência e análise de sobrevivência, descreve a taxa instantânea na qual um evento (como morte, falha de equipamento, etc.) ocorre em um determinado momento, dado que o indivíduo tenha sobrevivido até aquele ponto no tempo. É uma medida da probabilidade condicional de um evento ocorrer em um pequeno intervalo de tempo, dado que o indivíduo tenha sobrevivido até esse momento.
+
+Matematicamente, a função hazard é definida como a razão entre a densidade de probabilidade de um evento ocorrer em um determinado ponto no tempo e a probabilidade de sobrevivência até esse ponto. Em um contexto contínuo, a função hazard é representada por  $\lambda \left( t \right)$ tal que : 
+
+Claro, a função hazard em um contexto contínuo é frequentemente representada da seguinte maneira em LaTeX:
+
+\[ \lambda(t) = \lim_{{\Delta t \to 0}} \frac{P(t \leq T < t + \Delta t \mid T \geq t)}{\Delta t} \]
+
+Nesta fórmula:
+
+\begin{enumerate}
+
+\item-   $\lambda \left( t \right)$   é a função hazard no tempo t 
+\item- $P(t \leq T < t + \Delta t \mid T \geq t) $  é a probabilidade condicional de um evento ocorrer no intervalo $[t, t + \Delta t]$ dado que o evento não ocorreu até o tempo t
+\item-  $\Delta t $ representa um intervalo de tempo infinitesimalmente pequeno.
+
+\end{enumerate}
+
+Assim, conseguimos expressar a taxa de risco de um evento ocorrer em um tempo específico, dado que o indivíduo sobreviveu até aquele ponto no tempo.
+
+
+A interpretação da função hazard é crucial. Se a função hazard é constante ao longo do tempo, isso indica que a taxa de risco do evento é constante, o que é característico de muitos processos naturais. Por outro lado, se a função hazard aumenta ou diminui ao longo do tempo, isso indica mudanças na taxa de risco ao longo do tempo.
+
+Uma função hazard crescente sugere que o risco de um evento aumenta com o tempo, enquanto uma função hazard decrescente indica que o risco diminui ao longo do tempo. Por exemplo, em estudos médicos, a função hazard pode mostrar como o risco de certas condições de saúde, como doenças cardiovasculares ou câncer, pode variar ao longo da vida de um paciente.
+
+## Análise dos resíduos - Cox Snell
+
+Esses resíduos são uma maneira de avaliar a adequação do modelo ajustado aos dados e examinar como bem o modelo de riscos proporcionais está descrevendo a relação entre as variáveis explicativas e a taxa de risco.
+
+Quando ajustamos um modelo de riscos proporcionais de Cox para dados de sobrevivência, estamos modelando como as variáveis independentes influenciam a taxa de risco (hazard) de um evento ocorrer ao longo do tempo. Os resíduos de Cox-Snell são calculados a partir da distribuição acumulada dos tempos observados versus a distribuição acumulada dos tempos esperados, conforme previstos pelo modelo.
+
+Para calcular os resíduos de Cox-Snell, os tempos de sobrevivência observados são transformados usando as estimativas de probabilidade de sobrevivência derivadas do modelo ajustado. Em seguida, esses tempos transformados são comparados com uma distribuição teórica (normalmente uma distribuição exponencial se o modelo está bem especificado) para verificar se o modelo ajustado está adequado aos dados.
+
+Se os resíduos de Cox-Snell se comportarem de maneira semelhante à distribuição teórica esperada (por exemplo, se seguirem uma distribuição exponencial), isso sugere que o modelo de riscos proporcionais está ajustando bem os dados observados. Por outro lado, desvios significativos dessa distribuição teórica podem indicar problemas na especificação do modelo ou falta de ajuste aos dados.
+
+São dados por :
+
+\[ RS_i = -\ln(1 - \hat{S}(t_i)) \]
+
+Onde: 
+\begin{enumerate}
+    \item $RS_{i}$  é o resíduo de Cox-Snell para o evento i.
+    \item $\hat{S}t_{i}$  é a estimativa da função de sobrevivência no tempo $t_{i}$.
+    
+\end{enumerate}
+
+Explicitamos assim que eles são uma medida da discrepância entre a probabilidade prevista de sobrevivência e a não ocorrência do evento até o tempo $t_{i}$, transformada para facilitar a avaliação do ajuste do modelo de riscos proporcionais de Cox aos dados de sobrevivência. 
+
+
+
+## Seleção das variáveis
+
+
+## Escolha do modelo
+
+### TRV
+A estatística de razão de verossimilhança (likelihood ratio test) é uma ferramenta fundamental na comparação de modelos em análise de sobrevivência, especialmente quando se trabalha com modelos de riscos proporcionais de Cox.
+
+Ela compara a adequação de dois modelos distintos, geralmente um modelo completo (mais complexo) e um modelo reduzido (menos complexo). A diferença na verossimilhança entre esses dois modelos é usada para avaliar se o modelo mais complexo oferece um ajuste significativamente melhor em comparação com o modelo mais simples.
+
+A ideia central é comparar as verossimilhanças dos dois modelos (o modelo completo e o modelo reduzido) para determinar se a inclusão de variáveis adicionais ou complexidade no modelo completo melhora significativamente a capacidade do modelo de explicar os dados observados.
+
+A estatística de razão de verossimilhança é calculada como o logaritmo natural da razão entre as verossimilhanças dos dois modelos. Em um contexto de riscos proporcionais de Cox, essa estatística segue aproximadamente uma distribuição qui-quadrado, assumindo que o modelo mais simples é verdadeiro (ou seja, não há diferenças reais entre os modelos).
+
+Se a estatística de razão de verossimilhança for grande o suficiente, ou seja, se a diferença entre os modelos for significativa, isso indica que o modelo mais complexo se ajusta significativamente melhor aos dados do que o modelo mais simples. Portanto, pode-se rejeitar a hipótese nula de que o modelo mais simples é suficiente para descrever os dados.
+
+Em resumo, a estatística de razão de verossimilhança é uma ferramenta estatística poderosa para comparar a adequação de modelos distintos na análise de sobrevivência, permitindo determinar se a inclusão de variáveis ou complexidade adicional resulta em uma melhoria significativa na capacidade do modelo de explicar os dados observados.
+
+
+\[ \text{LR} = -2 \times (\ln(\mathcal{L}_{\text{reduzido}}) - \ln(\mathcal{L}_{\text{completo}})) \]
+
+Onde :
+
+\begin{enumerate}
+    \item $\text{LR}$  é a estatística de razão de verossimilhança.
+    \item $\ln(\mathcal{L}_{\text{reduzido}})$  é o logaritmo da verossimilhança do modelo reduzido.
+    \item $\ln(\mathcal{L}_{\text{completo}})$  é o logaritmo da verossimilhança do modelo completo.
+\end{enumerate}
+
+
+Representando assim a diferença entre os logaritmos das verossimilhanças dos modelos completo e reduzido, multiplicada por -2 para ajustar a distribuição da estatística de razão de verossimilhança para uma distribuição qui-quadrado, que é usada para testar a significância estatística da diferença entre os modelos.
+
+
+### BIC
+
+
+O BIC é derivado da teoria da informação e é utilizado para comparar diferentes modelos com base na verossimilhança dos dados e no número de parâmetros do modelo. A ideia central é penalizar modelos mais complexos, aqueles com mais parâmetros, com o intuito de evitar o overfitting, ou seja, evitar que o modelo se ajuste excessivamente aos dados de treinamento e perca capacidade de generalização para novos dados.
+
+A fórmula do BIC é dada por:
+
+\[ BIC = -2 \times \ln(L) + k \times \ln(n) \]
+
+Onde: 
+
+\begin{enumerate}
+    \item $\ln(L)$  é o logaritmo da verossimilhança do modelo, ou seja, o valor máximo da função de verossimilhança atingido pelo modelo.
+    \item k  é o número de parâmetros no modelo.
+    \item n é o número de observações nos dados.
+\end{enumerate}
+
+O BIC penaliza modelos mais complexos (com um número maior de parâmetros) adicionando um termo proporcional a \( k \times \ln(n) \) ao valor \( -2 \times \ln(L) \). Isso significa que, à medida que o número de parâmetros aumenta, o BIC aumenta, mas a penalização é maior para conjuntos de dados menores, refletida pelo termo \( \ln(n) \).
+
+Ao comparar modelos, o BIC indica que o modelo com o valor mais baixo é preferível, pois alcança um bom ajuste aos dados, mas também é mais parcimonioso, evitando o sobreajuste. Portanto, o BIC é útil para a seleção de modelos, ajudando a encontrar um equilíbrio entre a capacidade de ajuste e a complexidade do modelo.
+
+### AIC
+
+O AIC é baseado na ideia de encontrar um equilíbrio entre a capacidade de ajuste do modelo aos dados e a complexidade do modelo, penalizando modelos mais complexos. Ele leva em consideração tanto a habilidade do modelo em ajustar os dados quanto o número de parâmetros utilizados, buscando encontrar o modelo que melhor se ajuste aos dados sem ser excessivamente complexo. Sendo dado por:
+
+\[ AIC = -2 \times \ln(L) + 2k \]
+
+Onde: 
+\begin{enumerate}
+    \item $\ln(L)$  é o logaritmo da verossimilhança do modelo.
+    \item k  é o número de parâmetros no modelo.
+\end{enumerate}
+
+
+O AIC penaliza modelos mais complexos adicionando \( 2k \) ao valor \( -2 \times \ln(L) \), onde \( k \) representa o número de parâmetros no modelo. Portanto, à medida que o número de parâmetros aumenta, o AIC aumenta, mas ele também recompensa modelos com uma verossimilhança maior, refletida pelo termo \( -2 \times \ln(L) \).
+
+Ao comparar modelos, o AIC indica que o modelo com o valor mais baixo é preferível, pois alcança um bom ajuste aos dados, mas também é mais parcimonioso, evitando o sobreajuste. 
+
+
+### AICc
+
+O AIC corrigido (ou AICc) é uma versão modificada do Critério de Akaike (AIC), especialmente útil em situações em que o tamanho da amostra é pequeno em relação ao número de parâmetros do modelo. Ele ajusta o AIC para levar em consideração a amostra limitada, oferecendo uma penalização mais forte para modelos mais complexos em comparação com o AIC padrão.
+
+O AICc adiciona um fator de correção à penalidade do AIC, levando em conta o tamanho da amostra (\(n\)) e o número de parâmetros (\(k\)) no modelo. A fórmula do AICc é:
+
+\[ AICc = AIC + \frac{2k(k+1)}{n - k - 1} \]
+
+Aqui, além da penalidade padrão do AIC (\(2k\)), adiciona-se o termo \( \frac{2k(k+1)}{n - k - 1} \) como correção, onde \(n\) é o número de observações no conjunto de dados.
+
+O AICc é particularmente valioso em conjuntos de dados pequenos, onde o AIC padrão pode superestimar a complexidade do modelo devido à amostra limitada. Ele oferece uma penalização adicional para modelos mais complexos, ajudando na seleção de modelos quando o tamanho da amostra é pequeno em relação ao número de parâmetros do modelo.
+
 
 \newpage
 
@@ -74,16 +306,20 @@ KM = survfit(Surv(dados$tempo,dados$censura)~1)
 autoplot(KM)
 ```
 
+\newpage
+
 ### A funcao de risco acumulado
 
-```{r}
+```{r, fig.align = 'center'}
 autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 ```
+
+\newpage
 
 ### Curva TTT
 
 Grafico do Tempo Total sobre Teste
-```{r}
+```{r, fig.align = 'center'}
 #curva TTT
 TTT(dados$tempo)
 ```
@@ -115,7 +351,7 @@ Podemos notar que tanto pelo grafico quanto pelo teste, com p-valor = 0.9, que a
 
 #### Variavel Diabetes
 
-Comparacao entre curvas de sobrevivencia da variavel Dibetes
+
 
 ```{r, fig.align = 'center'}
 # Resposta x diabetes
@@ -131,13 +367,14 @@ autoplot(KM)
 #teste para diferenca de curvas
 survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 ```
+
 Pelo p-valor de 0.9 pode assumir que nao existe diferenca entre as curvas
 
 \newpage
 
 #### Variavel Anaemia
 
-Comparacao das curvas entre os grupo que tem Anemia e os que nao tem.
+
 
 ```{r, fig.align = 'center'}
 # Resposta x anaemia
@@ -196,9 +433,9 @@ survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
 ```
 
 
+\newpage
 
-
-### Seleçao da distribuicao 
+## Seleçao da distribuicao 
 
 Vamos ajustar algumas distribuicoes sobre o grafico de Kaplan-Meier para selecionar aquela que se adapta melhor a curva. Alem disso estaremos verificando os valores AIC, AIC corrigido e BIC para deicidir a distribuicao a ser utilizada.
 
@@ -229,9 +466,9 @@ lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.0
 
 ## Add legends
 legend(x = "bottomleft",
-       legend = c("Kaplan-Meier", "Cox (Efron)", "Weibull", "log-logistic","log-normal"),
+       legend = c("Kaplan-Meier", "Weibull", "log-logistic","log-normal"),
        lwd = 2, bty = "n",
-       col = c("black", "purple", "red", "blue","green"))
+       col = c("black", "red", "blue","green"))
 ```
 
 
@@ -255,6 +492,7 @@ BICws = (-2*weibull.null$loglik[1])+(pws*log(n))
 medidasw = cbind(AICws,AICcws,BICws)
 ```
 
+#### Distribuicao Weibull
 
 ```{r}
 cat("Weibull ~(",gama_weibull,",",alpha_weibull,")")
@@ -263,7 +501,7 @@ medidasw
 
 summary(weibull.null)
 ```
-
+\newpage
 
 ```{r}
 sigma_lognormal = lognormal.null$scale
@@ -282,6 +520,7 @@ BIClns = (-2*lognormal.null$loglik[1])+(plns*log(n))
 medidalns = cbind(AIClns,AICclns,BIClns)
 ```
 
+#### Distribuicao Log-Normal
 
 ```{r}
 cat("Log-Normal ~(",mi_lognormal,",",sigma_lognormal,")")
@@ -309,20 +548,181 @@ BIClls = (-2*loglogistic.null$loglik[1])+(plls*log(n))
 medidalls = cbind(AIClls,AICclls,BIClls)
 ```
 
+#### Distribuicao Log-Logistica
 
 ```{r}
-cat("Log-Normal ~(",gama_loglogistica,",",alpha_loglogistica,")")
+cat("Log-Logistica ~(",gama_loglogistica,",",alpha_loglogistica,")")
 
 medidalls
 
 summary(loglogistic.null)
 ```
 
+#### Comparando as 3 distribuicoes 
 
 ```{r}
 medidasw
 medidalns
 medidalls
+```
+
+\newpage
+
+## Selecao de variaveis
+
+### Manual
+
+Nessa etapa vamos ajustar um modelo utilizando todas as covariaveis disponiveis e em seguida remover as que nao sao significativas para chegar num modelo reduzido e realizar o TRV para decidir qual ficamos, em seguida vamos realizar outras formas de selecao de variaveis e comparar para chegar numa final.
+
+```{r}
+lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking  , dist = "lognorm")
+summary(lognormal.completa)
+```
+
+
+```{r}
+lognormal.reduzida <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+summary(lognormal.reduzida)
+```
+
+
+```{r}
+lnorm_completa = lognormal.completa$loglik[2] #log da verossimilhanca do modelo com completo variaveis
+lnorm_reduzida = lognormal.reduzida$loglik[2] #log da verossimilhanca do modelo reduzido
+
+TRV = 2*(lnorm_reduzida - lnorm_completa)
+TRV
+```
+
+
+```{r}
+df = abs(lognormal.completa$df-lognormal.reduzida$df)
+df
+```
+
+
+```{r}
+p_val <- pchisq(TRV, df , lower.tail = FALSE)
+p_val
+```
+
+Nesse caso ficamos com o modelo reduzido
+
+### Random Forest
+
+Nesse etapa vamos usar um algoritmo de random forest para selecionar as variaveis importantes do nosso modelo
+
+```{r}
+## ------------------------------------------------------------
+## Minimal depth variable selection
+## survival analysis
+## use larger node size which is better for minimal depth
+## ------------------------------------------------------------
+s <- with(dados,Surv(tempo,censura))
+pbc.obj <- rfsrc(Surv(tempo,censura) ~ ., dados, nodesize = 20, importance = TRUE)
+
+# default call corresponds to minimal depth selection
+vs.pbc <- var.select(object = pbc.obj)
+topvars <- vs.pbc$topvars
+```
+
+```{r}
+lognormal.reduzida_rf <- survreg(data = dados, s ~ ejection_fraction+serum_creatinine+age+serum_sodium , dist = "lognorm")
+summary(lognormal.reduzida_rf)
+```
+
+
+### Stepwise 
+
+```{r}
+names. <- names(dados)[-(12:13)]
+status1 <- dados$censura
+X <- as.matrix(dados)[ , names.]
+vars=srstepwise(X, dados$tempo, status1,dist = "lognorm")
+print(names.[vars])
+
+vars
+```
+
+
+```{r}
+lognormal.reduzida_step <- survreg(data = dados, s ~ age+high_blood_pressure, dist = "lognorm")
+
+summary(lognormal.reduzida_step)
+
+```
+## Analise de reisudos
+
+Temos 3 modelos finais e para isso vamos utilizar a analise de reisudos de cada um para ver qual se adequa melhor aos dados
+
+
+### Modelo Manual
+
+```{r}
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+```
+
+### Modelo Random Forest
+
+```{r}
+y = log(dados$tempo)
+mip = lognormal.reduzida_rf$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+```
+
+### Modelo Stepwise
+
+```{r}
+y = log(dados$tempo)
+mip = lognormal.reduzida_step$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
 ```
 
 # Conclusão

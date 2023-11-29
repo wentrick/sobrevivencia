@@ -17,3 +17,7 @@ Hmisc
 rms
 ggfortify
 ranger
+nlme
+nnet
+BART
+randomForestSRC
