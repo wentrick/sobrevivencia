@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE,
 
 ```{r load-packages, include = FALSE}
 # packages
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger,BART,randomForestSRC)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger,BART,randomForestSRC,qpcR,lmtest)
 ```
 
 ```{r generate-package-refs, include=FALSE}
@@ -572,65 +572,258 @@ medidalls
 
 ### Manual
 
-Nessa etapa vamos ajustar um modelo utilizando todas as covariaveis disponiveis e em seguida remover as que nao sao significativas para chegar num modelo reduzido e realizar o TRV para decidir qual ficamos, em seguida vamos realizar outras formas de selecao de variaveis e comparar para chegar numa final.
+#### Etapa 1: Ajustar os modelos com somente uma covariavel para verificar se sao significativas individualmente.
+
 
 ```{r}
-lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking  , dist = "lognorm")
-summary(lognormal.completa)
+lognormal.1 = survreg(data = dados, s ~ age, dist = "lognorm")
+summary(lognormal.1)
+```
+
+```{r}
+lognormal.2 = survreg(data = dados, s ~ anaemia, dist = "lognorm")
+summary(lognormal.2)
+```
+
+```{r}
+lognormal.3 = survreg(data = dados, s ~ creatinine_phosphokinase, dist = "lognorm")
+summary(lognormal.3)
+```
+
+```{r}
+lognormal.4 = survreg(data = dados, s ~ diabetes, dist = "lognorm")
+summary(lognormal.4)
+```
+
+```{r}
+lognormal.5 = survreg(data = dados, s ~ ejection_fraction  , dist = "lognorm")
+summary(lognormal.5)
+```
+
+```{r}
+lognormal.6 = survreg(data = dados, s ~ high_blood_pressure, dist = "lognorm")
+summary(lognormal.6)
+```
+
+```{r}
+lognormal.7 = survreg(data = dados, s ~ platelets, dist = "lognorm")
+summary(lognormal.7)
+```
+
+```{r}
+lognormal.8 = survreg(data = dados, s ~ serum_creatinine, dist = "lognorm")
+summary(lognormal.8)
+```
+
+```{r}
+lognormal.9 = survreg(data = dados, s ~ serum_sodium, dist = "lognorm")
+summary(lognormal.9)
+```
+
+```{r}
+lognormal.10 = survreg(data = dados, s ~ sex, dist = "lognorm")
+summary(lognormal.10)
+```
+
+```{r}
+lognormal.11 = survreg(data = dados, s ~ smoking, dist = "lognorm")
+summary(lognormal.11)
+```
+
+Observando os p-valores de cada modelo ajustado com uma variavel sao significantes a nivel de 5%: `serum_sodium`,`serum_creatinine`,`high_blood_pressure`,`ejection_fraction` e `age`. 
+
+\newpage
+
+#### Etapa 2: Ajustar um modelo com todas essas variaveis significativas e comparar com modelos reduzidos removendo uma dessas variaveis.
+
+```{r}
+lognormal.12 = survreg(data = dados, s ~ age+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lognormal.13 = survreg(data = dados, s ~ age+ejection_fraction+high_blood_pressure+serum_creatinine, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.12,lognormal.13)
+```
+
+```{r}
+lognormal.14 = survreg(data = dados, s ~ age+ejection_fraction+high_blood_pressure+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.12,lognormal.14)
+```
+
+```{r}
+lognormal.15 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.12,lognormal.15)
+```
+
+```{r}
+lognormal.16 = survreg(data = dados, s ~ age+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.12,lognormal.16)
+```
+
+```{r}
+lognormal.17 = survreg(data = dados, s ~ ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.12,lognormal.17)
+```
+
+A unica variavel que nao foi significante e escolhemos o modelo sem ela foi `high_blood_pressure`. Em seguida deveriamos ajustar um modelo com as variaveis que restaram e compara com o modelo com as variaveis excluidas para ver se a retirada conjunta faz alguma diiferenca. Como so tivemos uma variavel removida nao precisamos realizar isso ja que repetiriamos o teste feito. 
+
+\newpage
+
+#### Etapa 3: Ajustar o modelo sem a variavel excluida e comparar com as variaveis removidas na etapa 1
+
+O Objetivo dessa etapa é verfificar se alguma das variaveis excluidas na etapa 1 (`anaemia`,`creatinine_phosphokinase`,`diabetes`,`platelets`,`sex`,`smoking`) sao significativa em conjunto com outras selecionadas na etapa 2.
+
+```{r}
+lognormal.18 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lognormal.19 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+anaemia, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.19)
+```
+
+```{r}
+lognormal.20 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+creatinine_phosphokinase, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.20)
+```
+
+```{r}
+lognormal.21 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+diabetes, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.21)
 ```
 
 
 ```{r}
-lognormal.reduzida <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
+lognormal.22 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+platelets, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.22)
+```
+
+```{r}
+lognormal.23 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+sex, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.23)
+```
+
+```{r}
+lognormal.24 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+smoking, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.24)
+```
+
+Nenhuma das variaveis que retiramos inicialmente ficam no modelo a nivel de 5%.
+
+\newpage
+
+#### Etapa 4: Verificar se podemos simplificar nosso modelo obtido na etapa 3 removendo alguma variavel.
+
+```{r}
+lognormal.25 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.25)
+```
+
+```{r}
+lognormal.26 = survreg(data = dados, s ~ age+ejection_fraction+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.26) 
+```
+
+```{r}
+lognormal.27 = survreg(data = dados, s ~ age+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.27) 
+```
+
+```{r}
+lognormal.28 = survreg(data = dados, s ~ ejection_fraction+serum_creatinine+serum_sodium, dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.18,lognormal.28) 
+```
+
+Pelos resultados a nivel de 5% removemos a variavel `serum_sodium`. Com isso chegamos ao nosso modelo final para os efeitos principais
+
+\newpage
+
+#### Etapa 5: Verificar a interacao entre as variaveis restantes no modelo final obtido na etapa anterior.
+
+```{r}
+lognormal.28 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine, dist = "lognorm")
+```
+
+```{r}
+lognormal.29 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+(age*ejection_fraction), dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.28,lognormal.29) 
+```
+
+```{r}
+lognormal.30 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+(age*serum_creatinine), dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.28,lognormal.30) 
+```
+
+```{r}
+lognormal.31 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+(ejection_fraction*serum_creatinine), dist = "lognorm")
+```
+
+```{r}
+lrtest(lognormal.28,lognormal.31)
+```
+
+Nenhum dos termos de interacao foram significativos para o modelo.
+
+\newpage
+
+#### Etapa 6: Ajuste do modelo final
+
+```{r}
+lognormal.reduzida = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine, dist = "lognorm")
 summary(lognormal.reduzida)
 ```
-
-
-```{r}
-lnorm_completa = lognormal.completa$loglik[2] #log da verossimilhanca do modelo com completo variaveis
-lnorm_reduzida = lognormal.reduzida$loglik[2] #log da verossimilhanca do modelo reduzido
-
-TRV = 2*(lnorm_reduzida - lnorm_completa)
-TRV
-```
-
-
-```{r}
-df = abs(lognormal.completa$df-lognormal.reduzida$df)
-df
-```
-
-
-```{r}
-p_val <- pchisq(TRV, df , lower.tail = FALSE)
-p_val
-```
-
-Nesse caso ficamos com o modelo reduzido
-
-### Random Forest
-
-Nesse etapa vamos usar um algoritmo de random forest para selecionar as variaveis importantes do nosso modelo
-
-```{r}
-## ------------------------------------------------------------
-## Minimal depth variable selection
-## survival analysis
-## use larger node size which is better for minimal depth
-## ------------------------------------------------------------
-s <- with(dados,Surv(tempo,censura))
-pbc.obj <- rfsrc(Surv(tempo,censura) ~ ., dados, nodesize = 20, importance = TRUE)
-
-# default call corresponds to minimal depth selection
-vs.pbc <- var.select(object = pbc.obj)
-topvars <- vs.pbc$topvars
-```
-
-```{r}
-lognormal.reduzida_rf <- survreg(data = dados, s ~ ejection_fraction+serum_creatinine+age+serum_sodium , dist = "lognorm")
-summary(lognormal.reduzida_rf)
-```
-
+\newpage
 
 ### Stepwise 
 
@@ -647,43 +840,20 @@ vars
 
 ```{r}
 lognormal.reduzida_step <- survreg(data = dados, s ~ age+high_blood_pressure, dist = "lognorm")
-
 summary(lognormal.reduzida_step)
-
 ```
-## Analise de reisudos
 
-Temos 3 modelos finais e para isso vamos utilizar a analise de reisudos de cada um para ver qual se adequa melhor aos dados
+\newpage
 
+## Analise de residuos
+
+Temos 2 modelos finais e para isso vamos utilizar a analise de residuos de cada um para ver qual se adequa melhor aos dados
 
 ### Modelo Manual
 
 ```{r}
 y = log(dados$tempo)
 mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
-
-```
-
-### Modelo Random Forest
-
-```{r}
-y = log(dados$tempo)
-mip = lognormal.reduzida_rf$linear.predictors
 Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
 ei = (-log(Smod))
 
@@ -740,30 +910,15 @@ AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
 BIClls = (-2*lognormal.reduzida$loglik[2])+(plls*log(n))
 
 medidas_manual = cbind(AIClls,AICclls,BIClls)
+
+manual = c(AIC(lognormal.reduzida),AICc(lognormal.reduzida),BIC(lognormal.reduzida))
 ```
 
 ```{r}
 cat("Valores modelo manual:",medidas_manual)
+cat("Valores modelo manual usando funcoes:",manual)
 ```
 
-
-```{r}
-#plls = 2 #descobrir o que é isso
-
-plls = length(lognormal.reduzida_rf$coefficients)
-
-AIClls = (-2*lognormal.reduzida_rf$loglik[2])+(2*plls)
-
-AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
-
-BIClls = (-2*lognormal.reduzida_rf$loglik[2])+(plls*log(n))
-
-medidas_rf = cbind(AIClls,AICclls,BIClls)
-```
-
-```{r}
-cat("Valores modelo random forest:",medidas_rf)
-```
 
 ```{r}
 #plls = 2 #descobrir o que é isso
@@ -777,10 +932,30 @@ AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
 BIClls = (-2*lognormal.reduzida_step$loglik[2])+(plls*log(n))
 
 medidalls = cbind(AIClls,AICclls,BIClls)
+
+manual = c(AIC(lognormal.reduzida_step),AICc(lognormal.reduzida_step),BIC(lognormal.reduzida_step))
+
 ```
 
 ```{r}
-cat("Valores modelo stepwise:",medidalls)
+cat("Valores modelo stepwise manual:",medidalls)
+cat("Valores modelo stepwise usando funcoes:",manual)
+```
+
+
+```{r}
+AIC(lognormal.reduzida_step)
+AIC(lognormal.reduzida)
+```
+```{r}
+AICc(lognormal.reduzida_step)
+AICc(lognormal.reduzida)
+```
+
+
+```{r}
+BIC(lognormal.reduzida_step)
+BIC(lognormal.reduzida)
 ```
 
 # Conclusão
