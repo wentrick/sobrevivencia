@@ -725,6 +725,64 @@ legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = 
 
 ```
 
+
+## Comparando os modelos finais
+
+```{r}
+#plls = 2 #descobrir o que é isso
+
+plls = length(lognormal.reduzida$coefficients)
+
+AIClls = (-2*lognormal.reduzida$loglik[2])+(2*plls)
+
+AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
+
+BIClls = (-2*lognormal.reduzida$loglik[2])+(plls*log(n))
+
+medidas_manual = cbind(AIClls,AICclls,BIClls)
+```
+
+```{r}
+cat("Valores modelo manual:",medidas_manual)
+```
+
+
+```{r}
+#plls = 2 #descobrir o que é isso
+
+plls = length(lognormal.reduzida_rf$coefficients)
+
+AIClls = (-2*lognormal.reduzida_rf$loglik[2])+(2*plls)
+
+AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
+
+BIClls = (-2*lognormal.reduzida_rf$loglik[2])+(plls*log(n))
+
+medidas_rf = cbind(AIClls,AICclls,BIClls)
+```
+
+```{r}
+cat("Valores modelo random forest:",medidas_rf)
+```
+
+```{r}
+#plls = 2 #descobrir o que é isso
+
+plls = length(lognormal.reduzida_step$coefficients)
+
+AIClls = (-2*lognormal.reduzida_step$loglik[2])+(2*plls)
+
+AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
+
+BIClls = (-2*lognormal.reduzida_step$loglik[2])+(plls*log(n))
+
+medidalls = cbind(AIClls,AICclls,BIClls)
+```
+
+```{r}
+cat("Valores modelo stepwise:",medidalls)
+```
+
 # Conclusão
 
 # Referencia Bibliografica

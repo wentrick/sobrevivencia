@@ -338,24 +338,71 @@ summary(lognormal.4)
 
 podemos observar que ao aumentar a proporcao de atraso e o numero de comprimidos por dia nos diminuimos a probabilidade de sobrevivencia.
 
-#### TESTE
+### Analise usando Y = log(T)
+
+Como selecionamos a distribuição log-normal, quando reparametrizamos para log(T) ela seguira uma distribuição normal, logo podmos alterar isso na função `survreg()`
 
 ```{r}
-#create a Surv object
-s <- with(dados,Surv(tempo,censura))
-## Kaplan-Meier estimator without grouping
-km.null <- survfit(data = dados, s ~ 1)
-plot(km.null, ylim = c(0.7, 1),conf.int = F)
+s <- with(dados,Surv(log(tempo),censura))
 
-## Parametric estimation with log-normal distribution
-lines(x = predict(lognormal.4, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
-      y = rev(seq(0.01, 0.99, by = 0.01)),
-      col = "red")
-
-## Add legends
-legend(x = "bottomleft",
-       legend = c("Kaplan-Meier","log-normal (modelo final)"),
-       lwd = 2, bty = "n",
-       col = c("black", "red"))
+normal.1 <- survreg(data = dados, s ~ linha, dist = "gaussian")
+summary(normal.1)
 ```
+
+
+```{r}
+s <- with(dados,Surv(tempo,censura))
+
+normal.1 <- survreg(data = dados, s ~ linha, dist = "lognorm")
+summary(normal.1)
+```
+
+Com um p-valor de 0.45 a covariavel linha nao apresente significancia estatistica para o modelo, assim podemos retira-la.
+
+```{r}
+normal.2 <- survreg(data = dados, s ~ propatraso, dist = "gaussian")
+summary(normal.2)
+```
+
+Com um p-valor < 0.001 podemos deixar a variavel de proporcao de de atraso no modelo.
+
+```{r}
+normal.3 <- survreg(data = dados, s ~ comprimdia, dist = "gaussian")
+summary(normal.3)
+```
+
+O mesmo pode ser dito para a variavel de numero de comprimidos por dia que apresenta um p-valor de 0.025.
+
+
+
+
+
+```{r}
+
+normal <- survreg(data = dados, s ~ comprimdia + propatraso, dist = "gaussian")
+summary(lognormal.4)
+```
+
+
+```{r}
+y = log(dados$tempo)
+mip = normal$linear.predictors
+Smod = 1-pnorm((y-mip)/normal$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+```
+
 

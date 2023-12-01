@@ -339,6 +339,15 @@ lines(te,sexp,lty=2,col=2)
 legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
+#martingal
+martingal = dados$censura - ei
+
+plot(y,martingal)
+
+#deviance 
+
+#devw = (martingal/abs(martingal))*(-2*(martingal+censura*log(censura-martingal)))
+
 ### teste 4
 
 #rC : Cox-Snell residuals
