@@ -1,7 +1,6 @@
 ---
-title: "Document title"
-subtitle: "Subtitle"
-author: "Davi Wentrick Feijó -200016806, Micael Papa - 000000000"
+title: "Aplicação de modelos sobrevivência mediante dados de insuficiência cardíaca"
+author: "Davi Wentrick Feijó -200016806, Micael Egídio Papa da Silva - 211029236"
 header_left: "Departamento de Estatistica"
 header_right: "UNB"
 date: \today
@@ -9,7 +8,6 @@ fontsize: 11pt
 german: false # default is English
 bibliography: bib/references.bib, bib/packages.bib
 bibliographystyle: bib/bibstyle.bst
-abstract: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut elit odio. Donec fermentum tellus neque, vitae fringilla orci pretium vitae. Fusce maximus finibus facilisis. Donec ut ullamcorper turpis. Donec ut porta ipsum. Nullam cursus mauris a sapien ornare pulvinar. Aenean malesuada molestie erat quis mattis. Praesent scelerisque posuere faucibus. Praesent nunc nulla, ullamcorper ut ullamcorper sed, molestie ut est. Donec consequat libero nisi, non semper velit vulputate et. Quisque eleifend tincidunt ligula, bibendum finibus massa cursus eget. Curabitur aliquet vehicula quam non pulvinar. Aliquam facilisis tortor nec purus finibus, sit amet elementum eros sodales. Ut porta porttitor vestibulum."
 output: 
   UHHformats::pdf_simple:
     font: "Helvetica" # alternative: "TheSansUHH"  
@@ -24,7 +22,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE,
 
 ```{r load-packages, include = FALSE}
 # packages
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger,BART,randomForestSRC,qpcR,lmtest)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,knitr,xtable,kableExtra,ggplot2,ggfortify,ranger,BART,randomForestSRC,qpcR,lmtest,StepReg,ggcorplot)
 ```
 
 ```{r generate-package-refs, include=FALSE}
@@ -197,6 +195,71 @@ Explicitamos assim que eles são uma medida da discrepância entre a probabilida
 
 ## Seleção das variáveis
 
+### Stepwise
+O método stepwise é uma técnica usada na seleção de variáveis em modelos estatísticos, especialmente em modelos de regressão. Ele envolve a inclusão e exclusão iterativa de variáveis explicativas com base em critérios específicos, como a melhoria do ajuste do modelo ou a minimização do erro.
+
+Existem duas formas principais de stepwise: forward stepwise e backward stepwise.
+
+1. Forward Stepwise Selection: \\
+   - Começa sem variáveis no modelo. \\
+   - Iterativamente, adiciona variáveis uma por uma, escolhendo aquela que mais melhora o modelo com base em algum critério (como R², AIC, BIC, etc.). \\
+   - Continua adicionando variáveis até que a adição de outras não melhore significativamente o modelo. \\
+
+2. Backward Stepwise Selection:\\
+   - Começa com todas as variáveis no modelo. \\
+   - Iterativamente, remove variáveis uma por uma, escolhendo a que menos prejudica o modelo com base em algum critério. \\
+   - Continua removendo variáveis até que a exclusão de outras não melhore significativamente o modelo. \\
+
+Ambos os métodos podem ser combinados em um processo "stepwise" que realiza adições e remoções de variáveis no modelo até que não haja mais melhoria substancial nos critérios de avaliação.
+
+Esse processo Stepwise é uma abordagem que combina os métodos forward e backward em um único procedimento. Ele realiza tanto adições quanto remoções de variáveis em cada iteração, considerando diferentes conjuntos de variáveis candidatas.
+
+O processo do stepwise conjunto pode ser realizado da seguinte maneira: \\
+
+1. Inicialização: Começa com um conjunto vazio de variáveis no modelo (forward) e todas as variáveis no modelo (backward). \\
+
+2. Passos Iterativos:\\ 
+   - Forward Step: Adiciona uma variável ao modelo se melhorar o critério de seleção (como R², AIC, BIC, etc.). \\
+   - Backward Step: Remove uma variável do modelo se sua exclusão melhorar o critério de seleção.\\
+   
+3. Critério de Parada: O algoritmo continua alternando entre os passos forward e backward até que não seja possível adicionar mais variáveis que melhorem o critério de seleção (forward) ou remover mais variáveis que melhorem o critério (backward). Pode ser determinado por critérios como estabilidade do modelo, não melhoria substancial do critério de avaliação, ou outros critérios pré-definidos. \\
+
+Essa abordagem combina as vantagens do forward e backward stepwise, permitindo a exploração de diferentes conjuntos de variáveis e a busca por um modelo que se ajuste bem aos dados. No entanto, também enfrenta críticas semelhantes às dos métodos individuais, como o potencial de overfitting e a sensibilidade aos critérios de seleção. \\
+
+É importante ter em mente que, embora o método stepwise conjunto seja uma tentativa de abordar as limitações dos métodos forward e backward, a seleção de variáveis em modelos estatísticos geralmente requer uma compreensão cuidadosa do contexto do problema e a consideração de múltiplos métodos para validar os resultados. \\
+
+ Onde, a abordagem stepwise não possui uma fórmula única, mas podemos exemplificar como a adição e remoção de variáveis podem ser representadas em um contexto de regressão linear múltipla.
+
+Suponha um modelo de regressão linear múltipla onde estamos selecionando variáveis com base em algum critério de ajuste, como o AIC (Critério de Informação de Akaike):
+
+A fórmula para o AIC é: \\ 
+\[ AIC = 2k - 2\ln(\hat{L}) \]
+ 
+Onde: \\
+- \( k \) é o número de parâmetros no modelo. \\
+- \( \hat{L} \) é a função de verossimilhança máxima do modelo. \\
+
+No processo stepwise, durante a adição de variáveis, você pode comparar dois modelos:
+
+1. Modelo com uma variável a mais: \\
+   - \( AIC_1 = 2k_1 - 2\ln(\hat{L}_1) \) \\
+
+2. Modelo atual: \\
+   - \( AIC_0 = 2k_0 - 2\ln(\hat{L}_0) \) \\
+
+Se \( AIC_1 < AIC_0 \), a variável adicional é considerada benéfica e é adicionada ao modelo.
+
+Durante a remoção de variáveis, você faz o processo inverso:
+
+1. Modelo sem uma variável: \\
+   - \( AIC_2 = 2k_2 - 2\ln(\hat{L}_2) \) \\
+
+2. Modelo atual: \\
+   - \( AIC_0 = 2k_0 - 2\ln(\hat{L}_0) \) \\
+
+Se \( AIC_2 < AIC_0 \), a variável é removida do modelo.
+
+Esses são os princípios básicos do processo stepwise em termos de comparação de critérios para adição e remoção de variáveis. No entanto, a implementação exata pode variar dependendo do critério de seleção, do tipo de modelo e de outros fatores específicos ao contexto do problema.
 
 ## Escolha do modelo
 
@@ -284,9 +347,11 @@ O AICc é particularmente valioso em conjuntos de dados pequenos, onde o AIC pad
 
 # Resultados
 
-## Analise exploratoria 
+## Analise Exploratória 
 
-Antes de ajustar o modelo,é necessario estudarmos o comportamento dos dados antes para pode identificar qual distribuicao sera mais adequada e ja realizar uma seleção das variaveis categoricas que sao significativas para o modelo final.
+
+Nessa etapa, vamos estudar a distribuição das variáveis numéricas e categóricas do banco, com o objetivo de verificar sua distribuição e correlação.
+
 
 ```{r}
 dados <- read_csv("heart_failure_clinical_records_dataset.csv") %>%
@@ -298,7 +363,48 @@ dados <- read_csv("heart_failure_clinical_records_dataset.csv") %>%
 head(dados)
 ```
 
-### Modelo de sobrevivencia nao parametrico de Kaplan-Meier
+### Correlação 
+
+```{r}
+cor_data=cor(dados %>% dplyr::select(-c(censura,tempo)))
+
+ggcorrplot::ggcorrplot(cor_data, hc.order = TRUE, type = "lower",
+   lab = TRUE,
+   digits = 1)
+```
+Nenhuma das variáveis exibe uma correlação muito forte, sendo a correlação entre as variáveis `sex` e `smoking` a que mais se diferencia das demais.
+
+### Análise das variáveis numéricas.
+
+```{r}
+ggplot(data=dados, aes(x=age)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Idade (Age)")
+
+ggplot(data=dados, aes(x=creatinine_phosphokinase)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Creatinine Phosphokinase")
+
+ggplot(data=dados, aes(x=ejection_fraction)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Ejection Fraction")
+
+ggplot(data=dados, aes(x=platelets)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Platelets")
+
+ggplot(data=dados, aes(x=serum_creatinine)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Serum Creatinine")
+
+ggplot(data=dados, aes(x=serum_sodium)) +
+  geom_histogram(fill="steelblue", color="black") +
+  ggtitle("Histograma de Serum Sodium")
+```
+
+\newpage
+
+### Modelo de sobrevivência não paramétrico de Kaplan-Meier.
 
 ```{r}
 KM = survfit(Surv(dados$tempo,dados$censura)~1)
@@ -308,7 +414,7 @@ autoplot(KM)
 
 \newpage
 
-### A funcao de risco acumulado
+### A função de risco acumulado
 
 ```{r, fig.align = 'center'}
 autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
@@ -316,13 +422,15 @@ autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 
 \newpage
 
-### Curva TTT
+### Curva TTT (Tempo Total sobre Teste)
 
-Grafico do Tempo Total sobre Teste
+Gráfico do Tempo Total sobre Teste
 ```{r, fig.align = 'center'}
 #curva TTT
 TTT(dados$tempo)
 ```
+
+Pelo formato da curva do gráfico, podemos notar que a função taxa de falha é monotonicamente crescente.
 
 \newpage
 
@@ -330,7 +438,7 @@ TTT(dados$tempo)
 
 #### Variavel Sex 
 
-Vamos comparar as curvas de sobrevivencias dividas por Sexo, com o objetivo de ver se essa variavel influencia na curva de sobrevivencia. Em seguida iremos fazer um teste para verificar a diferenca entre as curvas.
+Vamos comparar as curvas de sobrevivência divididas por sexo, com o objetivo de verificar se essa variável influencia na curva de sobrevivência. Em seguida, iremos realizar um teste para verificar a diferença entre as curvas.
 
 ```{r, fig.align = 'center'}
 KM = survfit(Surv(dados$tempo,dados$censura)~dados$sex)
@@ -345,13 +453,10 @@ autoplot(KM)
 survdiff(Surv(tempo, censura) ~ sex, data=dados, rho = 1)
 ```
 
-Podemos notar que tanto pelo grafico quanto pelo teste, com p-valor = 0.9, que a variavel Sexo nao parece influenciar nas curvas de sobrevivencia
-
+Podemos notar, tanto pelo gráfico quanto pelo teste com p-valor igual a 0.9, que a variável Sexo não parece influenciar nas curvas de sobrevivência.
 \newpage
 
 #### Variavel Diabetes
-
-
 
 ```{r, fig.align = 'center'}
 # Resposta x diabetes
@@ -368,7 +473,7 @@ autoplot(KM)
 survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 ```
 
-Pelo p-valor de 0.9 pode assumir que nao existe diferenca entre as curvas
+Com um p-valor de 0.9, podemos concluir que não há evidência estatística suficiente para afirmar a existência de diferença significativa entre as curvas.
 
 \newpage
 
@@ -391,7 +496,7 @@ autoplot(KM)
 survdiff(Surv(tempo, censura) ~ diabetes, data=dados, rho = 1)
 ```
 
-Pelo p-valor de 0.9 podemos assumir que nao ha diferenca entre as categorias
+Com um p-valor de 0.9, podemos inferir que não há diferença estatisticamente significativa entre as categorias.
 
 \newpage
 
@@ -406,7 +511,6 @@ KM = survfit(Surv(dados$tempo,dados$censura)~dados$high_blood_pressure)
 #plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 autoplot(KM)
 ```
-
 
 ```{r}
 #teste para diferenca de curvas
@@ -426,7 +530,6 @@ KM = survfit(Surv(dados$tempo,dados$censura)~dados$smoking)
 autoplot(KM)
 ```
 
-
 ```{r}
 #teste para diferenca de curvas
 survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
@@ -435,9 +538,9 @@ survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
 
 \newpage
 
-## Seleçao da distribuicao 
+## Seleção da distribuição. 
 
-Vamos ajustar algumas distribuicoes sobre o grafico de Kaplan-Meier para selecionar aquela que se adapta melhor a curva. Alem disso estaremos verificando os valores AIC, AIC corrigido e BIC para deicidir a distribuicao a ser utilizada.
+Vamos ajustar diferentes distribuições sobre o gráfico de Kaplan-Meier para selecionar aquela que melhor se adapta à curva. Além disso, estaremos verificando os valores de AIC, AIC corrigido e BIC para decidir a distribuição a ser utilizada.
 
 ```{r}
 #create a Surv object
@@ -501,7 +604,7 @@ medidasw
 
 summary(weibull.null)
 ```
-\newpage
+
 
 ```{r}
 sigma_lognormal = lognormal.null$scale
@@ -558,6 +661,8 @@ medidalls
 summary(loglogistic.null)
 ```
 
+\newpage
+
 #### Comparando as 3 distribuicoes 
 
 ```{r}
@@ -566,11 +671,15 @@ medidalns
 medidalls
 ```
 
+Podemos observar pelos valores de AIC, AICc e BIC que a distribuição mais recomendada é a log-normal, no entanto, todas estão bastante próximas, indicando que também poderiam ser utilizadas com resultados semelhantes.
+
 \newpage
 
 ## Selecao de variaveis
 
 ### Manual
+
+Vamos manualmente selecionar as variáveis que devem permanecer no modelo final. Isso será feito para posterior comparação com outro modelo selecionado por uma função já implementada no R. Ao final, pretendemos comparar os dois modelos.
 
 #### Etapa 1: Ajustar os modelos com somente uma covariavel para verificar se sao significativas individualmente.
 
@@ -680,13 +789,13 @@ lognormal.17 = survreg(data = dados, s ~ ejection_fraction+high_blood_pressure+s
 lrtest(lognormal.12,lognormal.17)
 ```
 
-A unica variavel que nao foi significante e escolhemos o modelo sem ela foi `high_blood_pressure`. Em seguida deveriamos ajustar um modelo com as variaveis que restaram e compara com o modelo com as variaveis excluidas para ver se a retirada conjunta faz alguma diiferenca. Como so tivemos uma variavel removida nao precisamos realizar isso ja que repetiriamos o teste feito. 
+A única variável que não apresentou significância foi `high_blood_pressure`. Optamos por selecionar o modelo sem ela. Em seguida, deveríamos ajustar um modelo com as variáveis restantes e compará-lo com o modelo que excluiu a variável, para verificar se a exclusão conjunta tem algum impacto. No entanto, como apenas uma variável foi removida, não é necessário realizar esse procedimento, pois repetiríamos o teste já conduzido.
 
 \newpage
 
-#### Etapa 3: Ajustar o modelo sem a variavel excluida e comparar com as variaveis removidas na etapa 1
+#### Etapa 3: Ajustar o modelo sem a variável excluída e compará-lo com o modelo que continha as variáveis removidas na etapa 1.
 
-O Objetivo dessa etapa é verfificar se alguma das variaveis excluidas na etapa 1 (`anaemia`,`creatinine_phosphokinase`,`diabetes`,`platelets`,`sex`,`smoking`) sao significativa em conjunto com outras selecionadas na etapa 2.
+O objetivo desta etapa é verificar se alguma das variáveis excluídas na etapa 1 (`anaemia`,`creatinine_phosphokinase`,`diabetes`,`platelets`,`sex`,`smoking`) é significativa em conjunto com as outras selecionadas na etapa 2.
 
 ```{r}
 lognormal.18 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium, dist = "lognorm")
@@ -716,7 +825,6 @@ lognormal.21 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+
 lrtest(lognormal.18,lognormal.21)
 ```
 
-
 ```{r}
 lognormal.22 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+serum_sodium+platelets, dist = "lognorm")
 ```
@@ -741,11 +849,11 @@ lognormal.24 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+
 lrtest(lognormal.18,lognormal.24)
 ```
 
-Nenhuma das variaveis que retiramos inicialmente ficam no modelo a nivel de 5%.
+Nenhuma das variáveis que foram inicialmente retiradas permanece no modelo com um nível de significância de 5%.
 
 \newpage
 
-#### Etapa 4: Verificar se podemos simplificar nosso modelo obtido na etapa 3 removendo alguma variavel.
+#### Etapa 4: Vamos verificar se é possível simplificar o modelo obtido na etapa 3 removendo alguma variável.
 
 ```{r}
 lognormal.25 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine, dist = "lognorm")
@@ -779,11 +887,11 @@ lognormal.28 = survreg(data = dados, s ~ ejection_fraction+serum_creatinine+seru
 lrtest(lognormal.18,lognormal.28) 
 ```
 
-Pelos resultados a nivel de 5% removemos a variavel `serum_sodium`. Com isso chegamos ao nosso modelo final para os efeitos principais
+Com base nos resultados a um nível de significância de 5%, optamos por remover a variável `serum_sodium`. Com essa decisão, chegamos ao nosso modelo final para os efeitos principais.
 
 \newpage
 
-#### Etapa 5: Verificar a interacao entre as variaveis restantes no modelo final obtido na etapa anterior.
+#### Etapa 5: Vamos verificar a interação entre as variáveis restantes no modelo final obtido na etapa anterior.
 
 ```{r}
 lognormal.28 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine, dist = "lognorm")
@@ -813,7 +921,7 @@ lognormal.31 = survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+
 lrtest(lognormal.28,lognormal.31)
 ```
 
-Nenhum dos termos de interacao foram significativos para o modelo.
+Nenhum dos termos de interação apresentou significância estatística para o modelo.
 
 \newpage
 
@@ -827,27 +935,25 @@ summary(lognormal.reduzida)
 
 ### Stepwise 
 
-```{r}
-names. <- names(dados)[-(12:13)]
-status1 <- dados$censura
-X <- as.matrix(dados)[ , names.]
-vars=srstepwise(X, dados$tempo, status1,dist = "lognorm")
-print(names.[vars])
 
-vars
+Nesta etapa, vamos utilizar uma função já implementada no R chamada `stepwiseCox()`, que serve para realizar a seleção de variáveis para modelos de sobrevivência.
+
+\fontsize{6.6pt}{6.6pt}
+
+```{r}
+stepwiseCox(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, selection = "bidirection",sle = 0.05,sls = 0.05)
 ```
 
 
 ```{r}
-lognormal.reduzida_step <- survreg(data = dados, s ~ age+high_blood_pressure, dist = "lognorm")
+lognormal.reduzida_step <- survreg(data = dados, s ~ age+ejection_fraction+serum_creatinine+high_blood_pressure, dist = "lognorm")
 summary(lognormal.reduzida_step)
 ```
+
 
 \newpage
 
 ## Analise de residuos
-
-Temos 2 modelos finais e para isso vamos utilizar a analise de residuos de cada um para ver qual se adequa melhor aos dados
 
 ### Modelo Manual
 
@@ -898,69 +1004,40 @@ legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = 
 
 ## Comparando os modelos finais
 
+\fontsize{11pt}{11pt}
+
 ```{r}
-#plls = 2 #descobrir o que é isso
-
-plls = length(lognormal.reduzida$coefficients)
-
-AIClls = (-2*lognormal.reduzida$loglik[2])+(2*plls)
-
-AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
-
-BIClls = (-2*lognormal.reduzida$loglik[2])+(plls*log(n))
-
-medidas_manual = cbind(AIClls,AICclls,BIClls)
-
 manual = c(AIC(lognormal.reduzida),AICc(lognormal.reduzida),BIC(lognormal.reduzida))
 ```
 
 ```{r}
-cat("Valores modelo manual:",medidas_manual)
-cat("Valores modelo manual usando funcoes:",manual)
+cat("Valores modelo manual:",manual)
 ```
 
-
 ```{r}
-#plls = 2 #descobrir o que é isso
-
-plls = length(lognormal.reduzida_step$coefficients)
-
-AIClls = (-2*lognormal.reduzida_step$loglik[2])+(2*plls)
-
-AICclls = AIClls + ((2*plls*(plls+1))/(n-plls-1))
-
-BIClls = (-2*lognormal.reduzida_step$loglik[2])+(plls*log(n))
-
-medidalls = cbind(AIClls,AICclls,BIClls)
-
 manual = c(AIC(lognormal.reduzida_step),AICc(lognormal.reduzida_step),BIC(lognormal.reduzida_step))
-
 ```
 
 ```{r}
-cat("Valores modelo stepwise manual:",medidalls)
-cat("Valores modelo stepwise usando funcoes:",manual)
+cat("Valores modelo stepwise:",manual)
 ```
 
-
-```{r}
-AIC(lognormal.reduzida_step)
-AIC(lognormal.reduzida)
-```
-```{r}
-AICc(lognormal.reduzida_step)
-AICc(lognormal.reduzida)
-```
-
-
-```{r}
-BIC(lognormal.reduzida_step)
-BIC(lognormal.reduzida)
-```
+A análise do gráfico de resíduos de Cox-Snell sugere que ambos os modelos apresentaram um ajuste satisfatório até o ponto de resíduo 0.6. No entanto, no trecho final, a precisão diminuiu. Observando visualmente, nota-se que o modelo stepwise está mais próximo da curva no final em comparação ao modelo selecionado manualmente. Quanto às medidas AIC e BIC, estão muito próximas, indicando que ambos os modelos podem ser utilizados e interpretados. Com base na diferença gráfica, optaremos pelo modelo final do Stepwise.
 
 # Conclusão
 
+Ao interpretar o modelo final, observamos que os coeficientes das variáveis `high_blood_pressure`, `serum_creatinine` e `age` contribuem para a redução da chance de sobrevivência do indivíduo, ou seja, aumentam a probabilidade de ocorrência de uma falha cardíaca. Por outro lado, o coeficiente da variável `ejection_fraction` auxilia na diminuição da probabilidade de falha, aumentando assim a chance de sobrevivência.
+
+
 # Referencia Bibliografica
 
+COLOSIMO, E. A.; GIOLO, S. R. Análise de Sobrevivência Aplicada. Edgard Blucher, São Paulo, 2006.
 
+CORDEIRO, G. M.; ORTEGA, E. M. M.; SILVA, G. O. Modelos de Regressão Estendidos em Análise de Sobrevivência. XII Escola de Modelos de Regressão, 2011.
+
+KALBFLEISH, J. D.; PRENTICE, R. L. The Statistical Analysis of Failure Time Data. John Wiley & Sons, New York, 2002.
+
+LAI, C. D.; XIE, M.; MURTHY, D. N. P. Modified Weibull model. IEEE Transactions on Reliability, v. 52, p. 33-37, 2003.
+
+LAWLESS, J. F. Statistical Methods and Models for Lifetime Data. John Wiley & Sons, New York, 1982.
 

@@ -1,4 +1,4 @@
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,BART,randomForestSRC)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,BART,randomForestSRC,StepReg)
 
 #### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
 
@@ -418,7 +418,96 @@ TRV
 
 1-pchisq(TRV,df)
 
-######
+####################
+stepwiseCox(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, selection = "score")
+
+
+
+lognormal.reduzida = survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_sodium, dist = "lognorm")
+
+
+
+
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+
+
+
+
+
+
+
+
+
+lognormal.reduzida = survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_sodium+serum_creatinine, dist = "lognorm")
+
+
+
+
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+
+
+s <- with(dados,Surv(tempo,censura))
+
+
+lognormal.reduzida = survreg(data = dados, s ~ high_blood_pressure, dist = "lognorm")
+summary(lognormal.reduzida)
+
+
+
+y = log(dados$tempo)
+mip = lognormal.reduzida$linear.predictors
+Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
+ei = (-log(Smod))
+
+
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+
+par(mfrow = c(1,1))
+
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+
+
+
 
 
 
