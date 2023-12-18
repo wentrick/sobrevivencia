@@ -1,4 +1,5 @@
-pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,BART,randomForestSRC,StepReg)
+pacman::p_load(readr,tidyverse,survival,AdequacyModel,rms,BART,randomForestSRC,StepReg,cuRe,survminer,dplyr)
+
 
 #### 1. Ler o banco de dados `adesao` que está disponível no Sigaa.
 
@@ -7,11 +8,57 @@ dados <- read_csv("dados/heart_failure_clinical_records_dataset.csv") %>%
   mutate(censura = DEATH_EVENT,
          tempo = time,
          age = round(age,0)) %>% 
-  select(-c(DEATH_EVENT,time))
+  dplyr::select(-c(DEATH_EVENT,time))
 
 
 
 head(dados)
+
+dados2 = dados %>%
+  dplyr::select(censura) %>%
+  drop_na() %>%
+  count(censura) %>%
+  mutate(freq = round((n/sum(n)*100),1)) %>% 
+  mutate(censura = as.factor(censura))%>%
+  mutate(freq = gsub("\\.", ",", freq) %>% paste("%", sep = ""),
+         label = str_c(n," (", freq, ")") %>% str_squish()) 
+
+  
+ggplot(dados2) +
+  aes(x = fct_reorder(str_wrap(censura), n, .desc=T), y = n , label = label) +
+  geom_bar(stat = "identity", fill = "blue", width = 0.7) +
+  geom_text(
+    position = position_dodge(width = .9),
+    vjust = -0.5, #hjust = .5,
+    size = 3 ) + 
+  labs(x = "Censura", y = "Frequencia")
+  
+
+ggplot(data=dados, aes(x=age)) +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
+  ggtitle("Histograma de Idade (Age)")
+
+ggplot(data=dados, aes(x=creatinine_phosphokinase)) +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
+  ggtitle("Histograma de Creatinine Phosphokinase")
+
+ggplot(data=dados, aes(x=ejection_fraction)) +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
+  ggtitle("Histograma de Ejection Fraction")
+
+ggplot(data=dados, aes(x=platelets)) +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
+  ggtitle("Histograma de Platelets")
+
+ggplot(data=dados, aes(x=serum_creatinine)) +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
+  ggtitle("Histograma de Serum Creatinine")
+
+ggplot(data=dados, aes(x=serum_sodium)) +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
+  ggtitle("Histograma de Serum Sodium")
+
+
 
 
 #### 2. Fazer uma análise exploratória apenas da variável resposta: estimativa de Kaplan-Meier (KM), gráfico da função de risco acumulado e gráfico do Tempo Total em Teste (gráfico TTT).
@@ -89,17 +136,7 @@ plot(KM,conf.int = F, mark.time = T, col = c("red","blue","green"))
 survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
 
 
-
-
-#Linhas TTT por categorias da variavel linha
-par(mfrow = c(1,2))
-dad2<-data.frame("tempo" = dados$tempo, "high_blood_pressure" = dados$high_blood_pressure)
-tempo1<-dad2[dad2$high_blood_pressure == "0",]
-TTT(tempo1$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
-tempo2<-dad2[dad2$high_blood_pressure == "1",]
-TTT(tempo2$tempo, col="red", lwd=2.5, grid=TRUE, lty=2)
-
-
+#### Escolhendo a Distribuicao ----
 
 #create a Surv object
 s <- with(dados,Surv(tempo,censura))
@@ -140,13 +177,16 @@ legend(x = "bottomleft",
 
 
 
+#### Calculando as medidas AIC, AICc e BIC ----
+
+
+#### WEIBULL
 #a funcao suvreg com weibull retorna o valor extremo, para isso temos que fazer uma transformacao para encontrar os parametrod da weibull padrao.
 n = length(dados$tempo) #n de obs
 
 gama_weibull = 1/weibull.null$scale
 
 alpha_weibull = exp(weibull.null$icoef[1])
-
 
 pws = 2 #numero de parametros da distribuicao
 
@@ -158,24 +198,12 @@ BICws = (-2*weibull.null$loglik[1])+(pws*log(n))
 
 medidasw = cbind(AICws,AICcws,BICws)
 
-
-
-
-cat("Weibull ~(",gama_weibull,",",alpha_weibull,")")
-
-medidasw
-
-summary(weibull.null)
-
-
-
-
+#### LOG-NORMAL
 sigma_lognormal = lognormal.null$scale
 
 mi_lognormal = lognormal.null$icoef[1]
 
-
-plns = 2 #descobrir o que é isso
+plns = 2 #numero de parametros para ser estimado no modelo
 
 AIClns = (-2*lognormal.null$loglik[1])+(2*plns)
 
@@ -185,23 +213,13 @@ BIClns = (-2*lognormal.null$loglik[1])+(plns*log(n))
 
 medidalns = cbind(AIClns,AICclns,BIClns)
 
-
-
-
-cat("Log-Normal ~(",mi_lognormal,",",sigma_lognormal,")")
-
-medidalns
-
-summary(loglogistic.null)
-
-
+#### LOG-LOGISTICA
 
 gama_loglogistica = 1/loglogistic.null$scale
 
 alpha_loglogistica = exp(loglogistic.null$icoef[1])
 
-
-plls = 2 #descobrir o que é isso
+plls = 2 #numero de parametros para ser estimado no modelo
 
 AIClls = (-2*loglogistic.null$loglik[1])+(2*plls)
 
@@ -212,125 +230,45 @@ BIClls = (-2*loglogistic.null$loglik[1])+(plls*log(n))
 medidalls = cbind(AIClls,AICclls,BIClls)
 
 
-
-
-cat("Log-Logistica ~(",gama_loglogistica,",",alpha_loglogistica,")")
-
-medidalls
-
-summary(loglogistic.null)
-
-
-
+#resultados das medidas de cada distribuicao
 medidasw
 medidalns
 medidalls
 
 
-######
-
-lognormal.1 <- survreg(data = dados, s ~ 1, dist = "lognorm")
-summary(lognormal.1)
-
-lognormal.2 <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking  , dist = "lognorm")
-summary(lognormal.2)
-
-lognormal.3 <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
-summary(lognormal.3)
-
-lognormal.4 <- survreg(data = dados, s ~ , dist = "lognorm")
-summary(lognormal.4)
-
-lnorm4 = lognormal.4$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm2 = lognormal.2$loglik[2] #log da verossimilhanca do modelo com propatraso
-
-TRV = 2*(lnorm4 - lnorm2)
-TRV
-
-1-pchisq(TRV,4)
-
-
-###################
-
-#create a Surv object
-s <- with(dados,Surv(tempo,censura))
-## Kaplan-Meier estimator without grouping
-km.null <- survfit(data = dados, s ~ 1)
-plot(km.null, ylim = c(0, 1),conf.int = F)
-
-## Parametric estimation with log-logistic distribution
-lognormal.completa <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, dist = "lognorm")
-lines(x = predict(lognormal.completa, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
-      y = rev(seq(0.01, 0.99, by = 0.01)),
-      col = "red")
-
-## Parametric estimation with log-normal distribution
-lognormal.reduzida <- survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium, dist = "lognorm")
-lines(x = predict(lognormal.reduzida, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
-      y = rev(seq(0.01, 0.99, by = 0.01)),
-      col = "blue")
-
-
-## Add legends
-legend(x = "bottomleft",
-       legend = c("Kaplan-Meier", "log-normal completa","log-normal reduzida"),
-       lwd = 2, bty = "n",
-       col = c("black", "red", "blue","green"))
-
-summary(lognormal.reduzida)
-
-
-### residuos de cox snell
-y = log(dados$tempo)
-mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
 
-#martingal
-martingal = dados$censura - ei
 
-plot(y,martingal)
-
-#deviance 
-
-#devw = (martingal/abs(martingal))*(-2*(martingal+censura*log(censura-martingal)))
-
-##### Aplicando a fração de cura
+#### Aplicando a fração de cura ----
 
 #verossimilhanca exponencial
 x0 = c(rep(1,n))
 x1 = dados$age
+x2 = dados$ejection_fraction
+x3 = dados$high_blood_pressure
+x4 = dados$serum_creatinine
 t = dados$tempo
 censura = dados$censura
 
 lognorm_vero = function(param){
   
   sigma =  param[1] 
-  beta0 =  param[2]
-  beta1 =  param[3]
-  phi = param[4]
+  phi = param[2]
+  beta0 =  param[3]
+  beta1 =  param[4]
+  beta2 =  param[5]
+  beta3 =  param[6]
+  beta4 =  param[7]
   
-  mip = beta0*x0+beta1*x1
   
-  if((sigma>0) &&(phi>0) && (phi<1)) {
+  
+  mip = cbind(x0,x1,x2,x3,x4) %*% c(beta0,beta1,beta2,beta3,beta4)
+  
+  if((sigma>0) && (phi>0) && (phi<1)) {
     
     densi = ((1/(t*sigma*sqrt(2*pi)))*exp(-((log(t)-mip)^2/(2*sigma^2))))
-    sobrevi = 1-pnorm((y-mip)/sigma)
+    sobrevi = 1-pnorm((t-mip)/sigma)
     spop = phi + (1-phi)*sobrevi
     fpop = (1-phi)*densi
     
@@ -343,7 +281,9 @@ lognorm_vero = function(param){
   
 }
 
-results_expo = optim(c(1.63,-0.336261,-0.046719,0.5),lognorm_vero,NULL,hessian = T,method = "BFGS")
+results_expo = optim(c(1.63,0.5,-0.336261,0.0403,-0.5081,0.0732,-0.046719),lognorm_vero,NULL,hessian = T,method = "BFGS")
+
+
 
 results_expo$convergence
 results_expo$par
@@ -352,12 +292,23 @@ invRE = solve(results_expo$hessian)
 varianciaE = diag(invRE)
 eppE = sqrt(varianciaE)
 
-phi = results_expo$par[4]
+phi = results_expo$par[2]
 
+## Medidas
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*logLE)+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*logLE)+(plns*log(n))
+
+(medidalns1 = cbind(AIClns,AICclns,BIClns))
 
 ### residuos de cox snell
 y = log(dados$tempo)
-mip = results_expo$par[2]*x0+results_expo$par[3]*x1
+mip = cbind(x0,x1,x2,x3,x4) %*% results_expo$par[3:length(results_expo$par)] 
 Smod = phi+(1-phi)*(1-pnorm((y-mip)/results_expo$par[1]))
 ei = (-log(Smod))
 
@@ -376,12 +327,123 @@ legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = 
 
 
 
+# Residuo Martingal
+martingal = dados$censura - ei
+
+par(mfrow = c(1,2))
+plot(y,martingal,xlab = "log(tempo)", ylab = "Residuo Martingal", pch = censura+1)
+plot(rank(y),martingal,xlab = "Rank das Observacoes", ylab = "Residuo Martingal", pch = censura+1)
 
 
+#deviance 
+
+devw = (martingal/abs(martingal))*(-2*(martingal+censura*log(censura-martingal)))^(1/2)
+plot(y,devw,xlab = "log(tempo)",ylab="Residuo Deviance", pch = censura+1)
+plot(rank(y),devw,xlab = "Rank das Observacoes",ylab="Residuo Deviance", pch = censura+1)
+
+###################
+
+#verossimilhanca exponencial
+x0 = c(rep(1,n))
+x1 = dados$age
+x2 = dados$ejection_fraction
+x3 = dados$serum_creatinine
+t = dados$tempo
+censura = dados$censura
+
+lognorm_vero = function(param){
+  
+  sigma =  param[1] 
+  phi = param[2]
+  beta0 =  param[3]
+  beta1 =  param[4]
+  beta2 =  param[5]
+  beta3 =  param[6]
+  
+  
+  
+  mip = cbind(x0,x1,x2,x3) %*% c(beta0,beta1,beta2,beta3)
+  
+  if((sigma>0) && (phi>0) && (phi<1)) {
+    
+    densi = ((1/(t*sigma*sqrt(2*pi)))*exp(-((log(t)-mip)^2/(2*sigma^2))))
+    sobrevi = 1-pnorm((t-mip)/sigma)
+    spop = phi + (1-phi)*sobrevi
+    fpop = (1-phi)*densi
+    
+    max = sum(censura * log(fpop) + (1-censura)*log(spop))
+    return(-1*max)
+  }
+  
+  else {
+    return (NA)}
+  
+}
+
+results_expo = optim(c(1.63,0.5,-0.336261,0.0403,-0.5081,0.0732),lognorm_vero,NULL,hessian = T,method = "BFGS")
 
 
+results_expo$convergence
+results_expo$par
+logLE = (-1)*results_expo$value
+invRE = solve(results_expo$hessian)
+varianciaE = diag(invRE)
+eppE = sqrt(varianciaE)
+
+phi = results_expo$par[2]
+
+## Medidas
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*logLE)+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*logLE)+(plns*log(n))
+
+(medidalns2 = cbind(AIClns,AICclns,BIClns))
+
+#teste da razao de verossimilhança
+
+#TRV = 2*(logLW-logLE)
+#1-pchisq(TRV,1)
 
 
+### residuos de cox snell
+y = log(dados$tempo)
+mip = cbind(x0,x1,x2,x3) %*% results_expo$par[3:length(results_expo$par)] 
+Smod = phi+(1-phi)*(1-pnorm((y-mip)/results_expo$par[1]))
+ei = (-log(Smod))
+  
+  
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+  
+par(mfrow = c(1,1))
+  
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+  
+
+
+# Residuo Martingal
+martingal = dados$censura - ei
+
+par(mfrow = c(1,2))
+plot(y,martingal,xlab = "log(tempo)", ylab = "Residuo Martingal", pch = censura+1)
+plot(rank(y),martingal,xlab = "Rank das Observacoes", ylab = "Residuo Martingal", pch = censura+1)
+
+
+#deviance 
+
+devw = (martingal/abs(martingal))*(-2*(martingal+censura*log(censura-martingal)))^(1/2)
+plot(y,devw,xlab = "log(tempo)",ylab="Residuo Martingal", pch = censura+1)
+plot(rank(y),devw,xlab = "Rank das Observacoes",ylab="Residuo Martingal", pch = censura+1)
 
 
 

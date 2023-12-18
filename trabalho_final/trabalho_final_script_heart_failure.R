@@ -300,68 +300,17 @@ lines(te,sexp,lty=2,col=2)
 legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
-### teste 2
-s <- with(dados,Surv(tempo,censura))
-
-psmE <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="exponential",data=dados)
-residE <- residuals(psmE)
-psmW <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="weibull",data=dados)
-residW <- residuals(psmW)
-psmLN <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="lognormal",data=dados)
-residLN <- residuals(psmLN)
-psmLL <- psm(s~age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_creatinine+serum_sodium,dist="loglogistic",data=dados)
-residLL <- residuals(psmLL)
-par(mfrow=c(2,2))
-survplot(residE,main="Exponential",ylab="Complement of residual CDF")
-survplot(residW,main="Weibull",ylab="Complement of residual CDF")
-survplot(residLN,main="Lognormal",ylab="Complement of residual CDF")
-survplot(residLL,main="Log Logistic",ylab="Complement of residual CDF")
-
-
-### teste 3
-
-y = log(dados$tempo)
-mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
-
 
 #martingal
 martingal = dados$censura - ei
+
+martingal = residuals(lognormal.reduzida,type = "deviance")
 
 plot(y,martingal)
 
 #deviance 
 
 #devw = (martingal/abs(martingal))*(-2*(martingal+censura*log(censura-martingal)))
-
-### teste 4
-
-#rC : Cox-Snell residuals
-#rM : Martingale residuals 
-#rD : Deviance residuals
-
-rC<-exp(((lognormal.reduzida$y[,1])-log(predict(lognormal.reduzida,dados,na.action = "na.omit")))/lognormal.reduzida$scale)
-rM<-lognormal.reduzida$y[,2]-rC
-rD<-sign(rM)*sqrt(-2*(rM+lognormal.reduzida$y[,2]*log(rC)))  # -residuals(fit,type='deviance')
-
-mean(rC)
-var(rC)
-
-qqplot((qexp(ppoints(length(rC)))),(rC));qqline(rC, distribution=qexp,col="red", lty=2)
 
 
 ####### Selecao de variavel testes
@@ -386,125 +335,17 @@ TRV
 
 1-pchisq(TRV,5)
 
-###############
-
-## ------------------------------------------------------------
-## Minimal depth variable selection
-## survival analysis
-## use larger node size which is better for minimal depth
-## ------------------------------------------------------------
-s <- with(dados,Surv(tempo,censura))
-pbc.obj <- rfsrc(Surv(tempo,censura) ~ ., dados, nodesize = 20, importance = TRUE)
-
-# default call corresponds to minimal depth selection
-vs.pbc <- var.select(object = pbc.obj)
-topvars <- vs.pbc$topvars
-
-# the above is equivalent to
-max.subtree(pbc.obj)$topvars
-
-
-lognormal.reduzida3 <- survreg(data = dados, s ~ ejection_fraction+serum_creatinine+age+serum_sodium , dist = "lognorm")
-summary(lognormal.reduzida2)
-
-
-lnorm_nested = lognormal.reduzida2$loglik[2] #log da verossimilhanca do modelo com 2 variaveis
-lnorm_complex = lognormal.reduzida3$loglik[2] #log da verossimilhanca do modelo com propatraso
-df = abs(lognormal.reduzida3$df-lognormal.reduzida2$df)
-
-
-TRV = 2*(lnorm_nested - lnorm_complex)
-TRV
-
-1-pchisq(TRV,df)
-
-####################
-stepwiseCox(data = dados, s ~ age+anaemia+creatinine_phosphokinase+diabetes+ejection_fraction+high_blood_pressure+platelets+serum_creatinine+serum_sodium+sex+smoking, selection = "score")
-
-
-
-lognormal.reduzida = survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_sodium, dist = "lognorm")
-
-
-
-
-y = log(dados$tempo)
-mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
 
 
 
+lognormal.reduzida <- survreg(data = dados, s ~ age+ejection_fraction+high_blood_pressure+serum_sodium, dist = "lognorm")
 
-
-
-
-
-lognormal.reduzida = survreg(data = dados, s ~ age+anaemia+creatinine_phosphokinase+ejection_fraction+high_blood_pressure+serum_sodium+serum_creatinine, dist = "lognorm")
-
-
-
-
-y = log(dados$tempo)
-mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
-
-
-
-s <- with(dados,Surv(tempo,censura))
-
-
-lognormal.reduzida = survreg(data = dados, s ~ high_blood_pressure, dist = "lognorm")
 summary(lognormal.reduzida)
 
 
 
-y = log(dados$tempo)
-mip = lognormal.reduzida$linear.predictors
-Smod = 1-pnorm((y-mip)/lognormal.reduzida$scale)
-ei = (-log(Smod))
-
-
-Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
-te = Kmew$time
-ste = Kmew$surv
-sexp = exp(-te)
-
-par(mfrow = c(1,1))
-
-plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
-plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
-lines(te,sexp,lty=2,col=2)
-legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
 
 
 

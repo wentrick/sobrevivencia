@@ -355,10 +355,10 @@ Nessa etapa, vamos estudar a distribuição das variáveis numéricas e categór
 
 ```{r}
 dados <- read_csv("heart_failure_clinical_records_dataset.csv") %>%
-  mutate(censura = DEATH_EVENT,
+  dplyr::mutate(censura = DEATH_EVENT,
          tempo = time,
          age = round(age,0)) %>% 
-  select(-c(DEATH_EVENT,time))
+  dplyr::select(-c(DEATH_EVENT,time))
 
 head(dados)
 ```
@@ -372,33 +372,63 @@ ggcorrplot::ggcorrplot(cor_data, hc.order = TRUE, type = "lower",
    lab = TRUE,
    digits = 1)
 ```
+
 Nenhuma das variáveis exibe uma correlação muito forte, sendo a correlação entre as variáveis `sex` e `smoking` a que mais se diferencia das demais.
+
+### Analise de Censura 
+
+```{r}
+dados2 = dados %>%
+  dplyr::select(censura) %>%
+  drop_na() %>%
+  count(censura) %>%
+  mutate(freq = round((n/sum(n)*100),1)) %>% 
+  mutate(censura = as.factor(censura))%>%
+  mutate(freq = gsub("\\.", ",", freq) %>% paste("%", sep = ""),
+         label = str_c(n," (", freq, ")") %>% str_squish()) 
+
+  
+ggplot(dados2) +
+  aes(x = fct_reorder(str_wrap(censura), n, .desc=T), y = n , label = label) +
+  geom_bar(stat = "identity", fill="steelblue", color="black", width = 0.7) +
+  geom_text(
+    position = position_dodge(width = .9),
+    vjust = -0.5, #hjust = .5,
+    size = 3 ) + 
+  labs(x = "Censura", y = "Frequencia")
+```
+
+Aqui podemos notar uma grande quantidade de censura no banco, aproximadamente 68%.
+
+\newpage
 
 ### Análise das variáveis numéricas.
 
+Vamos observar como é a distribuicao das variaveis numericas do banco
+
 ```{r}
 ggplot(data=dados, aes(x=age)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
   ggtitle("Histograma de Idade (Age)")
 
 ggplot(data=dados, aes(x=creatinine_phosphokinase)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
   ggtitle("Histograma de Creatinine Phosphokinase")
 
 ggplot(data=dados, aes(x=ejection_fraction)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 14) +
   ggtitle("Histograma de Ejection Fraction")
 
 ggplot(data=dados, aes(x=platelets)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
   ggtitle("Histograma de Platelets")
 
 ggplot(data=dados, aes(x=serum_creatinine)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
   ggtitle("Histograma de Serum Creatinine")
 
 ggplot(data=dados, aes(x=serum_sodium)) +
-  geom_histogram(fill="steelblue", color="black") +
+  geom_histogram(fill="steelblue", color="black",bins = 15) +
   ggtitle("Histograma de Serum Sodium")
 ```
 
@@ -412,6 +442,8 @@ KM = survfit(Surv(dados$tempo,dados$censura)~1)
 autoplot(KM)
 ```
 
+Podemos notar que nosso estimador nao chega a 0, indicando a existencia de uma fracao de cura ou seja algumas observacoes nunca vao registrar o evento de interesse. No caso vamos estar comparando um modelo sem fracao de cura com um que leva isso em consideracao 
+
 \newpage
 
 ### A função de risco acumulado
@@ -419,6 +451,8 @@ autoplot(KM)
 ```{r, fig.align = 'center'}
 autoplot(KM,fun = "cumhaz",xlab = "Tempo",ylab = "Risco Acumulado H(t)")
 ```
+
+Pelo gráfico podemos notar o risco crescente do nosso estudo.
 
 \newpage
 
@@ -517,6 +551,8 @@ autoplot(KM)
 survdiff(Surv(tempo, censura) ~ high_blood_pressure, data=dados, rho = 1)
 ```
 
+Aqui vemos que a variavel influencia na sobrevivnecia tendo em vista as curvas mais separadas e sem cruzzamentos, ou seja essa é uma variavel que podemos estar analisando no modelo final.
+
 \newpage
 
 #### Variavel Smoking
@@ -535,6 +571,7 @@ autoplot(KM)
 survdiff(Surv(tempo, censura) ~ smoking, data=dados, rho = 1)
 ```
 
+Podemos notar pela curva que nao existe diferenca significativa.
 
 \newpage
 
@@ -950,6 +987,179 @@ lognormal.reduzida_step <- survreg(data = dados, s ~ age+ejection_fraction+serum
 summary(lognormal.reduzida_step)
 ```
 
+\newpage
+
+### Modelo Manual com fracao de cura
+
+Para esse modelo vamos considerar as variaveis selecionadas no modelo manual e adicionar a fracao de cura
+
+\fontsize{11pt}{11pt}
+```{r}
+#verossimilhanca exponencial
+x0 = c(rep(1,n))
+x1 = dados$age
+x2 = dados$ejection_fraction
+x3 = dados$serum_creatinine
+t = dados$tempo
+censura = dados$censura
+
+lognorm_vero = function(param){
+  
+  sigma =  param[1] 
+  phi = param[2]
+  beta0 =  param[3]
+  beta1 =  param[4]
+  beta2 =  param[5]
+  beta3 =  param[6]
+  
+  
+  
+  mip = cbind(x0,x1,x2,x3) %*% c(beta0,beta1,beta2,beta3)
+  
+  if((sigma>0) && (phi>0) && (phi<1)) {
+    
+    densi = ((1/(t*sigma*sqrt(2*pi)))*exp(-((log(t)-mip)^2/(2*sigma^2))))
+    sobrevi = 1-pnorm((t-mip)/sigma)
+    spop = phi + (1-phi)*sobrevi
+    fpop = (1-phi)*densi
+    
+    max = sum(censura * log(fpop) + (1-censura)*log(spop))
+    return(-1*max)
+  }
+  
+  else {
+    return (NA)}
+  
+}
+
+results_expo = optim(c(1.63,0.5,-0.336261,0.0403,-0.5081,0.0732),lognorm_vero,NULL,hessian = T,method = "BFGS")
+```
+
+```{r}
+
+cat("Paramaetro de Escala do Modelo (Sigma):",results_expo$par[1])
+cat("Taxa de cura do Modelo (Phi):",results_expo$par[2])
+cat("Coeficientes do modelo:")
+cat("Intercepto",results_expo$par[3])
+cat("age:",results_expo$par[4])
+cat("ejection_fraction",results_expo$par[5])
+cat("serum_creatinine",results_expo$par[6])
+```
+
+
+```{r}
+logLE = (-1)*results_expo$value
+invRE = solve(results_expo$hessian)
+varianciaE = diag(invRE)
+eppE = sqrt(varianciaE)
+phi = results_expo$par[2]
+```
+
+
+```{r}
+## Medidas
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*logLE)+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*logLE)+(plns*log(n))
+
+(medidalns1 = cbind(AIClns,AICclns,BIClns))
+```
+
+
+\newpage
+
+### Modelo Stepwise com fracao de cura 
+
+Para esse modelo vamos considerar as variaveis selecionadas no modelo Stepwise e adicionar a fracao de cura
+
+```{r}
+#verossimilhanca exponencial
+x0 = c(rep(1,n))
+x1 = dados$age
+x2 = dados$ejection_fraction
+x3 = dados$high_blood_pressure
+x4 = dados$serum_creatinine
+t = dados$tempo
+censura = dados$censura
+
+lognorm_vero = function(param){
+  
+  sigma =  param[1] 
+  phi = param[2]
+  beta0 =  param[3]
+  beta1 =  param[4]
+  beta2 =  param[5]
+  beta3 =  param[6]
+  beta4 =  param[7]
+  
+  
+  
+  mip = cbind(x0,x1,x2,x3,x4) %*% c(beta0,beta1,beta2,beta3,beta4)
+  
+  if((sigma>0) && (phi>0) && (phi<1)) {
+    
+    densi = ((1/(t*sigma*sqrt(2*pi)))*exp(-((log(t)-mip)^2/(2*sigma^2))))
+    sobrevi = 1-pnorm((t-mip)/sigma)
+    spop = phi + (1-phi)*sobrevi
+    fpop = (1-phi)*densi
+    
+    max = sum(censura * log(fpop) + (1-censura)*log(spop))
+    return(-1*max)
+  }
+  
+  else {
+    return (NA)}
+  
+}
+
+results_expo2 = optim(c(1.63,0.5,-0.336261,0.0403,-0.5081,0.0732,-0.046719),lognorm_vero,NULL,hessian = T,method = "BFGS")
+```
+
+
+```{r}
+
+cat("Paramaetro de Escala do Modelo (Sigma):",results_expo2$par[1])
+cat("Taxa de cura do Modelo (Phi):",results_expo2$par[2])
+cat("Coeficientes do modelo:")
+cat("Intercepto",results_expo2$par[3])
+cat("age:",results_expo2$par[4])
+cat("ejection_fraction",results_expo2$par[5])
+cat("high_blood_pressure",results_expo2$par[6])
+cat("serum_creatinine",results_expo2$par[7])
+```
+
+
+```{r}
+logLE = (-1)*results_expo2$value
+invRE = solve(results_expo2$hessian)
+varianciaE = diag(invRE)
+eppE = sqrt(varianciaE)
+
+phi = results_expo2$par[2]
+```
+
+
+```{r}
+## Medidas
+
+plns = 2 #descobrir o que é isso
+
+AIClns = (-2*logLE)+(2*plns)
+
+AICclns = AIClns + ((2*plns*(plns+1))/(n-plns-1))
+
+BIClns = (-2*logLE)+(plns*log(n))
+
+(medidalns2 = cbind(AIClns,AICclns,BIClns))
+```
+
+
+
 
 \newpage
 
@@ -1001,6 +1211,55 @@ legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = 
 
 ```
 
+### Modelo Manual com fracao de cura
+
+```{r}
+### residuos de cox snell
+y = log(dados$tempo)
+mip = cbind(x0,x1,x2,x3) %*% results_expo$par[3:length(results_expo$par)] 
+Smod = phi+(1-phi)*(1-pnorm((y-mip)/results_expo$par[1]))
+ei = (-log(Smod))
+  
+  
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+  
+par(mfrow = c(1,1))
+  
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+```
+
+
+### Modelo Stepwise com fracao de cura 
+
+```{r}
+
+### residuos de cox snell
+y = log(dados$tempo)
+mip = cbind(x0,x1,x2,x3,x4) %*% results_expo2$par[3:length(results_expo2$par)] 
+Smod = phi+(1-phi)*(1-pnorm((y-mip)/results_expo$par[1]))
+ei = (-log(Smod))
+  
+  
+Kmew = survfit(Surv(ei,dados$censura)~1, conf.int = F)
+te = Kmew$time
+ste = Kmew$surv
+sexp = exp(-te)
+  
+par(mfrow = c(1,1))
+  
+plot(ste,sexp, xlab = "S(ei): Kaplan-Meier", ylab = "S(ei): Exponencial Padrao")
+plot(Kmew,conf.int = F, xlab = "Residuos de Cox-Snell", ylab = "Sobrevivencia estimada")
+lines(te,sexp,lty=2,col=2)
+legend(0.6,1.0,lty=c(1,2),c("Kaplan-Meier","Exponencial padrao"),cex=0.8, bty = "n")
+```
+
+
 
 ## Comparando os modelos finais
 
@@ -1022,11 +1281,19 @@ manual = c(AIC(lognormal.reduzida_step),AICc(lognormal.reduzida_step),BIC(lognor
 cat("Valores modelo stepwise:",manual)
 ```
 
-A análise do gráfico de resíduos de Cox-Snell sugere que ambos os modelos apresentaram um ajuste satisfatório até o ponto de resíduo 0.6. No entanto, no trecho final, a precisão diminuiu. Observando visualmente, nota-se que o modelo stepwise está mais próximo da curva no final em comparação ao modelo selecionado manualmente. Quanto às medidas AIC e BIC, estão muito próximas, indicando que ambos os modelos podem ser utilizados e interpretados. Com base na diferença gráfica, optaremos pelo modelo final do Stepwise.
+```{r}
+cat("Valores modelo manual com fracao de cura:",medidalns1)
+```
+
+```{r}
+cat("Valores modelo stepwise com fracao de cura:",medidalns2)
+```
+
+A avaliação do gráfico de resíduos de Cox-Snell sugere que, em geral, os modelos estão bem ajustados. No entanto, ao observarmos o gráfico de Kaplan-Meier, fica evidente que seria mais apropriado utilizar uma fração de cura, já que a estimativa não atinge o valor 0. Notamos que os modelos ajustados com a fração de cura conseguem seguir de perto a curva esperada dos resíduos, divergindo apenas no final. Isso nos indica que o mais adequado seria utilizar os modelos com fração de cura. No entanto, temos dois modelos, sendo a única diferença a variável `high_blood_pressure`. Conforme observado pelo Kaplan-Meier, essa variável apresenta diferenças nas curvas de sobrevivência. Portanto, o modelo final escolhido é o modelo stepwise com fração de cura por ter essa variavel.
 
 # Conclusão
 
-Ao interpretar o modelo final, observamos que os coeficientes das variáveis `high_blood_pressure`, `serum_creatinine` e `age` contribuem para a redução da chance de sobrevivência do indivíduo, ou seja, aumentam a probabilidade de ocorrência de uma falha cardíaca. Por outro lado, o coeficiente da variável `ejection_fraction` auxilia na diminuição da probabilidade de falha, aumentando assim a chance de sobrevivência.
+Ao interpretar o modelo final, observamos que os coeficientes das variáveis `high_blood_pressure`, `ejection_fraction` e `age` contribuem para a redução da chance de sobrevivência do indivíduo, ou seja, aumentam a probabilidade de ocorrência de uma falha cardíaca. Por outro lado, o coeficiente da variável `serum_creatinine` auxilia na diminuição da probabilidade de falha, aumentando assim a chance de sobrevivência.
 
 
 # Referencia Bibliografica
